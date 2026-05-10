@@ -12,15 +12,15 @@ This overlay contains my personal, highly customized ebuilds. It is maintained p
 ## 📦 Provided Packages
 
 ### `sys-kernel/intel-mainline-tracking-sources`
-[cite_start]This package provides the Linux kernel sources from [Intel's mainline-tracking repository](https://github.com/intel/mainline-tracking)[cite: 263]. 
+This package provides the Linux kernel sources from [Intel's mainline-tracking repository](https://github.com/intel/mainline-tracking). 
 
-[cite_start]Unlike directly cloning the upstream repository, this ebuild integrates the standard Gentoo patchset (`genpatches`)[cite: 263], allowing you to enjoy the benefits of Intel's latest hardware enabling patches alongside Gentoo's standard kernel fixes and features.
+Unlike directly cloning the upstream repository, this ebuild integrates the standard Gentoo patchset (`genpatches`), allowing you to enjoy the benefits of Intel's latest hardware enabling patches alongside Gentoo's standard kernel fixes and features.
 
-[cite_start]To resolve merge conflicts between Intel's tracking branches and Gentoo's genpatches, custom meta-patches (e.g., `genpatches-meta-*.patch`) are carefully applied during the `src_prepare` phase[cite: 13, 264].
+To resolve merge conflicts between Intel's tracking branches and Gentoo's genpatches, custom meta-patches (e.g., `genpatches-meta-*.patch`) are carefully applied during the `src_prepare` phase.
 
 **USE Flags:**
-* [cite_start]`vanilla`: Disables the application of Gentoo's `genpatches`[cite: 263]. Enable this if you want the pure, unmodified Intel mainline-tracking kernel source.
-* [cite_start]*(Note: Some older versions in this overlay may also include an `experimental` USE flag for testing experimental genpatches[cite: 250].)*
+* `vanilla`: Disables the application of Gentoo's `genpatches`. Enable this if you want the pure, unmodified Intel mainline-tracking kernel source.
+* *(Note: Some older versions in this overlay may also include an `experimental` USE flag for testing experimental genpatches.)*
 
 ## 🚀 Usage
 
@@ -36,7 +36,7 @@ Create a file at `/etc/portage/repos.conf/my-overlay.conf` (replace `my-overlay`
 [my-overlay]
 location = /var/db/repos/my-overlay
 sync-type = git
-sync-uri = [https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git)
+sync-uri = [https://github.com/miimoriya0-gent/intel-mainline-tracking-overlay.git](https://github.com/miimoriya0-gent/intel-mainline-tracking-overlay.git)
 auto-sync = yes
 ```
 
@@ -48,4 +48,4 @@ emerge -av sys-kernel/intel-mainline-tracking-sources
 ```
 
 ## 📄 License
-[cite_start]The ebuilds and patches in this repository are distributed under the GPL-2 License[cite: 263].
+The ebuilds and patches in this repository are distributed under the GPL-2 License.
