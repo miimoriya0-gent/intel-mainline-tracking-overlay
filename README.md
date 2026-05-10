@@ -36,7 +36,7 @@ Create a file at `/etc/portage/repos.conf/my-overlay.conf` (replace `my-overlay`
 [my-overlay]
 location = /var/db/repos/my-overlay
 sync-type = git
-sync-uri = [https://github.com/miimoriya0-gent/intel-mainline-tracking-overlay.git](https://github.com/miimoriya0-gent/intel-mainline-tracking-overlay.git)
+sync-uri = https://github.com/miimoriya0-gent/intel-mainline-tracking-overlay.git
 auto-sync = yes
 ```
 
