@@ -1,0 +1,546 @@
+diff --git a/1003_linux-6.19.4.patch b/1003_linux-6.19.4.patch
+index e2f354a9..baa0a505 100644
+--- a/1003_linux-6.19.4.patch
++++ b/1003_linux-6.19.4.patch
+@@ -1525,21 +1525,6 @@ index 0e5fad5f06ca11..783be50f38f2b3 100644
+  
+  config ARCH_SUPPORTS_KEXEC_PURGATORY
+  	def_bool y
+-diff --git a/arch/x86/events/core.c b/arch/x86/events/core.c
+-index 576baa9a52c5bd..af1329ae9f82aa 100644
+---- a/arch/x86/events/core.c
+-+++ b/arch/x86/events/core.c
+-@@ -3073,8 +3073,8 @@ void perf_get_x86_pmu_capability(struct x86_pmu_capability *cap)
+- 	cap->version		= x86_pmu.version;
+- 	cap->num_counters_gp	= x86_pmu_num_counters(NULL);
+- 	cap->num_counters_fixed	= x86_pmu_num_counters_fixed(NULL);
+--	cap->bit_width_gp	= x86_pmu.cntval_bits;
+--	cap->bit_width_fixed	= x86_pmu.cntval_bits;
+-+	cap->bit_width_gp	= cap->num_counters_gp ? x86_pmu.cntval_bits : 0;
+-+	cap->bit_width_fixed	= cap->num_counters_fixed ? x86_pmu.cntval_bits : 0;
+- 	cap->events_mask	= (unsigned int)x86_pmu.events_maskl;
+- 	cap->events_mask_len	= x86_pmu.events_mask_len;
+- 	cap->pebs_ept		= x86_pmu.pebs_ept;
+ diff --git a/arch/x86/hyperv/hv_crash.c b/arch/x86/hyperv/hv_crash.c
+ index c0e22921ace1a4..a78e4fed572032 100644
+ --- a/arch/x86/hyperv/hv_crash.c
+@@ -5338,19 +5323,6 @@ index e82a95ea472478..d698584273596b 100644
+  	if (use_sched_clock) {
+  		sched_clkevt = clkevt;
+  		sched_clock_register(sp804_read, 32, rate);
+-diff --git a/drivers/cpufreq/intel_pstate.c b/drivers/cpufreq/intel_pstate.c
+-index ec4abe3745736b..1625ec2d0d06a1 100644
+---- a/drivers/cpufreq/intel_pstate.c
+-+++ b/drivers/cpufreq/intel_pstate.c
+-@@ -1161,7 +1161,7 @@ static void hybrid_init_cpu_capacity_scaling(bool refresh)
+- 	 * the capacity of SMT threads is not deterministic even approximately,
+- 	 * do not do that when SMT is in use.
+- 	 */
+--	if (hwp_is_hybrid && !sched_smt_active() && arch_enable_hybrid_capacity_scale()) {
+-+	if (hwp_is_hybrid && !cpu_smt_possible() && arch_enable_hybrid_capacity_scale()) {
+- 		hybrid_refresh_cpu_capacity_scaling();
+- 		/*
+- 		 * Disabling ITMT causes sched domains to be rebuilt to disable asym
+ diff --git a/drivers/cpufreq/scmi-cpufreq.c b/drivers/cpufreq/scmi-cpufreq.c
+ index d2a110079f5fd5..c450cf9c881d49 100644
+ --- a/drivers/cpufreq/scmi-cpufreq.c
+@@ -21466,76 +21438,6 @@ index b3b0c37a9dd2d5..f00722c88c6fea 100644
+  	return ret;
+  }
+  
+-diff --git a/drivers/powercap/intel_rapl_common.c b/drivers/powercap/intel_rapl_common.c
+-index 3ff6da3bf4e630..3705d0608a0fba 100644
+---- a/drivers/powercap/intel_rapl_common.c
+-+++ b/drivers/powercap/intel_rapl_common.c
+-@@ -254,7 +254,7 @@ static void rapl_init_domains(struct rapl_package *rp);
+- static int rapl_read_data_raw(struct rapl_domain *rd,
+- 			      enum rapl_primitives prim,
+- 			      bool xlate, u64 *data,
+--			      bool atomic);
+-+			      bool pmu_ctx);
+- static int rapl_write_data_raw(struct rapl_domain *rd,
+- 			       enum rapl_primitives prim,
+- 			       unsigned long long value);
+-@@ -832,7 +832,7 @@ prim_fixups(struct rapl_domain *rd, enum rapl_primitives prim)
+-  */
+- static int rapl_read_data_raw(struct rapl_domain *rd,
+- 			      enum rapl_primitives prim, bool xlate, u64 *data,
+--			      bool atomic)
+-+			      bool pmu_ctx)
+- {
+- 	u64 value;
+- 	enum rapl_primitives prim_fixed = prim_fixups(rd, prim);
+-@@ -854,7 +854,7 @@ static int rapl_read_data_raw(struct rapl_domain *rd,
+- 
+- 	ra.mask = rpi->mask;
+- 
+--	if (rd->rp->priv->read_raw(get_rid(rd->rp), &ra, atomic)) {
+-+	if (rd->rp->priv->read_raw(get_rid(rd->rp), &ra, pmu_ctx)) {
+- 		pr_debug("failed to read reg 0x%llx for %s:%s\n", ra.reg.val, rd->rp->name, rd->name);
+- 		return -EIO;
+- 	}
+-diff --git a/drivers/powercap/intel_rapl_msr.c b/drivers/powercap/intel_rapl_msr.c
+-index 9a7e150b3536b9..152893dca5653a 100644
+---- a/drivers/powercap/intel_rapl_msr.c
+-+++ b/drivers/powercap/intel_rapl_msr.c
+-@@ -110,16 +110,14 @@ static int rapl_cpu_down_prep(unsigned int cpu)
+- 	return 0;
+- }
+- 
+--static int rapl_msr_read_raw(int cpu, struct reg_action *ra, bool atomic)
+-+static int rapl_msr_read_raw(int cpu, struct reg_action *ra, bool pmu_ctx)
+- {
+- 	/*
+--	 * When called from atomic-context (eg PMU event handler)
+--	 * perform MSR read directly using rdmsrq().
+-+	 * When called from PMU context, perform MSR read directly using
+-+	 * rdmsrq() without IPI overhead. Package-scoped MSRs are readable
+-+	 * from any CPU in the package.
+- 	 */
+--	if (atomic) {
+--		if (unlikely(smp_processor_id() != cpu))
+--			return -EIO;
+--
+-+	if (pmu_ctx) {
+- 		rdmsrq(ra->reg.msr, ra->value);
+- 		goto out;
+- 	}
+-diff --git a/drivers/powercap/intel_rapl_tpmi.c b/drivers/powercap/intel_rapl_tpmi.c
+-index 0a0b85f4528b1b..0f8abdc592bc19 100644
+---- a/drivers/powercap/intel_rapl_tpmi.c
+-+++ b/drivers/powercap/intel_rapl_tpmi.c
+-@@ -157,7 +157,7 @@ static int parse_one_domain(struct tpmi_rapl_package *trp, u32 offset)
+- 	tpmi_domain_flags = tpmi_domain_header >> 32 & 0xffff;
+- 
+- 	if (tpmi_domain_version == TPMI_VERSION_INVALID) {
+--		pr_warn(FW_BUG "Invalid version\n");
+-+		pr_debug("Invalid version, other instances may be valid\n");
+- 		return -ENODEV;
+- 	}
+- 
+ diff --git a/drivers/pwm/pwm-tiehrpwm.c b/drivers/pwm/pwm-tiehrpwm.c
+ index 7a86cb090f76f1..2533c95b0ba9d3 100644
+ --- a/drivers/pwm/pwm-tiehrpwm.c
+@@ -25883,19 +25785,6 @@ index 0e4742c8c81e3c..00000000000000
+ -};
+ -
+ -#endif
+-diff --git a/include/linux/intel_rapl.h b/include/linux/intel_rapl.h
+-index f479ef5b3341cf..fa1f328d671204 100644
+---- a/include/linux/intel_rapl.h
+-+++ b/include/linux/intel_rapl.h
+-@@ -152,7 +152,7 @@ struct rapl_if_priv {
+- 	union rapl_reg reg_unit;
+- 	union rapl_reg regs[RAPL_DOMAIN_MAX][RAPL_DOMAIN_REG_MAX];
+- 	int limits[RAPL_DOMAIN_MAX];
+--	int (*read_raw)(int id, struct reg_action *ra, bool atomic);
+-+	int (*read_raw)(int id, struct reg_action *ra, bool pmu_ctx);
+- 	int (*write_raw)(int id, struct reg_action *ra);
+- 	void *defaults;
+- 	void *rpi;
+ diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
+ index 266f2b39213a01..b2bb878abd113c 100644
+ --- a/include/linux/interrupt.h
+@@ -36443,266 +36332,6 @@ index 558138eea75e97..d00d15490a98c2 100644
+  		return 0;
+  	}
+  
+-diff --git a/tools/power/x86/turbostat/turbostat.c b/tools/power/x86/turbostat/turbostat.c
+-index 5ad45c2ac5bd8f..1b26d94c373fbd 100644
+---- a/tools/power/x86/turbostat/turbostat.c
+-+++ b/tools/power/x86/turbostat/turbostat.c
+-@@ -2135,7 +2135,7 @@ off_t idx_to_offset(int idx)
+- 
+- 	switch (idx) {
+- 	case IDX_PKG_ENERGY:
+--		if (valid_rapl_msrs & RAPL_AMD_F17H)
+-+		if (platform->plat_rapl_msrs & RAPL_AMD_F17H)
+- 			offset = MSR_PKG_ENERGY_STAT;
+- 		else
+- 			offset = MSR_PKG_ENERGY_STATUS;
+-@@ -3001,22 +3001,30 @@ void print_header(char *delim)
+- }
+- 
+- /*
+-- * pct()
+-+ * pct(numerator, denominator)
+-  *
+-- * If absolute value is < 1.1, return percentage
+-- * otherwise, return nan
+-+ * Return sanity checked percentage (100.0 * numerator/denominotor)
+-  *
+-- * return value is appropriate for printing percentages with %f
+-- * while flagging some obvious erroneous values.
+-+ * n < 0: nan
+-+ * d <= 0: nan
+-+ * n/d > 1.1: nan
+-  */
+--double pct(double d)
+-+double pct(double numerator, double denominator)
+- {
+-+	double retval;
+- 
+--	double abs = fabs(d);
+-+	if (numerator < 0)
+-+		return nan("");
+- 
+--	if (abs < 1.10)
+--		return (100.0 * d);
+--	return nan("");
+-+	if (denominator <= 0)
+-+		return nan("");
+-+
+-+	retval = 100.0 * numerator / denominator;
+-+
+-+	if (retval > 110.0)
+-+		return nan("");
+-+
+-+	return retval;
+- }
+- 
+- int dump_counters(PER_THREAD_PARAMS)
+-@@ -3046,7 +3054,7 @@ int dump_counters(PER_THREAD_PARAMS)
+- 
+- 		outp += sprintf(outp, "LLC refs: %lld", t->llc.references);
+- 		outp += sprintf(outp, "LLC miss: %lld", t->llc.misses);
+--		outp += sprintf(outp, "LLC Hit%%: %.2f", pct((t->llc.references - t->llc.misses) / t->llc.references));
+-+		outp += sprintf(outp, "LLC Hit%%: %.2f", pct((t->llc.references - t->llc.misses), t->llc.references));
+- 
+- 		for (i = 0, mp = sys.tp; mp; i++, mp = mp->next) {
+- 			outp += sprintf(outp, "tADDED [%d] %8s msr0x%x: %08llX %s\n", i, mp->name, mp->msr_num, t->counter[i], mp->sp->path);
+-@@ -3261,7 +3269,7 @@ int format_counters(PER_THREAD_PARAMS)
+- 		outp += sprintf(outp, "%s%.0f", (printed++ ? delim : ""), 1.0 / units * t->aperf / interval_float);
+- 
+- 	if (DO_BIC(BIC_Busy))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(t->mperf / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(t->mperf, tsc));
+- 
+- 	if (DO_BIC(BIC_Bzy_MHz)) {
+- 		if (has_base_hz)
+-@@ -3302,7 +3310,7 @@ int format_counters(PER_THREAD_PARAMS)
+- 			outp += sprintf(outp, "%s%.0f", (printed++ ? delim : ""), t->llc.references / interval_float / 1000);
+- 
+- 		if (DO_BIC(BIC_LLC_HIT))
+--			outp += sprintf(outp, fmt8, (printed++ ? delim : ""), pct((t->llc.references - t->llc.misses) / t->llc.references));
+-+			outp += sprintf(outp, fmt8, (printed++ ? delim : ""), pct((t->llc.references - t->llc.misses), t->llc.references));
+- 	}
+- 
+- 	/* Added Thread Counters */
+-@@ -3315,7 +3323,7 @@ int format_counters(PER_THREAD_PARAMS)
+- 			if (mp->type == COUNTER_USEC)
+- 				outp += print_float_value(&printed, delim, t->counter[i] / interval_float / 10000);
+- 			else
+--				outp += print_float_value(&printed, delim, pct(t->counter[i] / tsc));
+-+				outp += print_float_value(&printed, delim, pct(t->counter[i], tsc));
+- 		}
+- 	}
+- 
+-@@ -3329,7 +3337,7 @@ int format_counters(PER_THREAD_PARAMS)
+- 			if (pp->type == COUNTER_USEC)
+- 				outp += print_float_value(&printed, delim, t->perf_counter[i] / interval_float / 10000);
+- 			else
+--				outp += print_float_value(&printed, delim, pct(t->perf_counter[i] / tsc));
+-+				outp += print_float_value(&printed, delim, pct(t->perf_counter[i], tsc));
+- 		}
+- 	}
+- 
+-@@ -3343,34 +3351,34 @@ int format_counters(PER_THREAD_PARAMS)
+- 			break;
+- 
+- 		case PMT_TYPE_XTAL_TIME:
+--			value_converted = pct(value_raw / crystal_hz / interval_float);
+-+			value_converted = pct(value_raw / crystal_hz, interval_float);
+- 			outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), value_converted);
+- 			break;
+- 
+- 		case PMT_TYPE_TCORE_CLOCK:
+--			value_converted = pct(value_raw / tcore_clock_freq_hz / interval_float);
+-+			value_converted = pct(value_raw / tcore_clock_freq_hz, interval_float);
+- 			outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), value_converted);
+- 		}
+- 	}
+- 
+- 	/* C1 */
+- 	if (DO_BIC(BIC_CPU_c1))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(t->c1 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(t->c1, tsc));
+- 
+- 	/* print per-core data only for 1st thread in core */
+- 	if (!is_cpu_first_thread_in_core(t, c))
+- 		goto done;
+- 
+- 	if (DO_BIC(BIC_CPU_c3))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(c->c3 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(c->c3, tsc));
+- 	if (DO_BIC(BIC_CPU_c6))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(c->c6 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(c->c6, tsc));
+- 	if (DO_BIC(BIC_CPU_c7))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(c->c7 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(c->c7, tsc));
+- 
+- 	/* Mod%c6 */
+- 	if (DO_BIC(BIC_Mod_c6))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(c->mc6_us / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(c->mc6_us, tsc));
+- 
+- 	if (DO_BIC(BIC_CoreTmp))
+- 		outp += sprintf(outp, "%s%d", (printed++ ? delim : ""), c->core_temp_c);
+-@@ -3386,7 +3394,7 @@ int format_counters(PER_THREAD_PARAMS)
+- 		else if (mp->format == FORMAT_DELTA || mp->format == FORMAT_AVERAGE)
+- 			outp += print_decimal_value(mp->width, &printed, delim, c->counter[i]);
+- 		else if (mp->format == FORMAT_PERCENT)
+--			outp += print_float_value(&printed, delim, pct(c->counter[i] / tsc));
+-+			outp += print_float_value(&printed, delim, pct(c->counter[i], tsc));
+- 	}
+- 
+- 	/* Added perf Core counters */
+-@@ -3396,7 +3404,7 @@ int format_counters(PER_THREAD_PARAMS)
+- 		else if (pp->format == FORMAT_DELTA || mp->format == FORMAT_AVERAGE)
+- 			outp += print_decimal_value(pp->width, &printed, delim, c->perf_counter[i]);
+- 		else if (pp->format == FORMAT_PERCENT)
+--			outp += print_float_value(&printed, delim, pct(c->perf_counter[i] / tsc));
+-+			outp += print_float_value(&printed, delim, pct(c->perf_counter[i], tsc));
+- 	}
+- 
+- 	/* Added PMT Core counters */
+-@@ -3409,12 +3417,12 @@ int format_counters(PER_THREAD_PARAMS)
+- 			break;
+- 
+- 		case PMT_TYPE_XTAL_TIME:
+--			value_converted = pct(value_raw / crystal_hz / interval_float);
+-+			value_converted = pct(value_raw / crystal_hz, interval_float);
+- 			outp += print_float_value(&printed, delim, value_converted);
+- 			break;
+- 
+- 		case PMT_TYPE_TCORE_CLOCK:
+--			value_converted = pct(value_raw / tcore_clock_freq_hz / interval_float);
+-+			value_converted = pct(value_raw / tcore_clock_freq_hz, interval_float);
+- 			outp += print_float_value(&printed, delim, value_converted);
+- 		}
+- 	}
+-@@ -3470,39 +3478,39 @@ int format_counters(PER_THREAD_PARAMS)
+- 	if (DO_BIC(BIC_Totl_c0))
+- 		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), 100 * p->pkg_wtd_core_c0 / tsc);	/* can exceed 100% */
+- 	if (DO_BIC(BIC_Any_c0))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pkg_any_core_c0 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pkg_any_core_c0, tsc));
+- 	if (DO_BIC(BIC_GFX_c0))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pkg_any_gfxe_c0 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pkg_any_gfxe_c0, tsc));
+- 	if (DO_BIC(BIC_CPUGFX))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pkg_both_core_gfxe_c0 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pkg_both_core_gfxe_c0, tsc));
+- 
+- 	if (DO_BIC(BIC_Pkgpc2))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc2 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc2, tsc));
+- 	if (DO_BIC(BIC_Pkgpc3))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc3 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc3, tsc));
+- 	if (DO_BIC(BIC_Pkgpc6))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc6 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc6, tsc));
+- 	if (DO_BIC(BIC_Pkgpc7))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc7 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc7, tsc));
+- 	if (DO_BIC(BIC_Pkgpc8))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc8 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc8, tsc));
+- 	if (DO_BIC(BIC_Pkgpc9))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc9 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc9, tsc));
+- 	if (DO_BIC(BIC_Pkgpc10))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc10 / tsc));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->pc10, tsc));
+- 
+- 	if (DO_BIC(BIC_Diec6))
+--		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->die_c6 / crystal_hz / interval_float));
+-+		outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->die_c6 / crystal_hz, interval_float));
+- 
+- 	if (DO_BIC(BIC_CPU_LPI)) {
+- 		if (p->cpu_lpi >= 0)
+--			outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->cpu_lpi / 1000000.0 / interval_float));
+-+			outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->cpu_lpi / 1000000.0, interval_float));
+- 		else
+- 			outp += sprintf(outp, "%s(neg)", (printed++ ? delim : ""));
+- 	}
+- 	if (DO_BIC(BIC_SYS_LPI)) {
+- 		if (p->sys_lpi >= 0)
+--			outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->sys_lpi / 1000000.0 / interval_float));
+-+			outp += sprintf(outp, "%s%.2f", (printed++ ? delim : ""), pct(p->sys_lpi / 1000000.0, interval_float));
+- 		else
+- 			outp += sprintf(outp, "%s(neg)", (printed++ ? delim : ""));
+- 	}
+-@@ -3542,7 +3550,7 @@ int format_counters(PER_THREAD_PARAMS)
+- 		else if (mp->format == FORMAT_DELTA || mp->format == FORMAT_AVERAGE)
+- 			outp += print_decimal_value(mp->width, &printed, delim, p->counter[i]);
+- 		else if (mp->format == FORMAT_PERCENT)
+--			outp += print_float_value(&printed, delim, pct(p->counter[i] / tsc));
+-+			outp += print_float_value(&printed, delim, pct(p->counter[i], tsc));
+- 	}
+- 
+- 	/* Added perf Package Counters */
+-@@ -3554,7 +3562,7 @@ int format_counters(PER_THREAD_PARAMS)
+- 		else if (pp->format == FORMAT_DELTA || mp->format == FORMAT_AVERAGE)
+- 			outp += print_decimal_value(pp->width, &printed, delim, p->perf_counter[i]);
+- 		else if (pp->format == FORMAT_PERCENT)
+--			outp += print_float_value(&printed, delim, pct(p->perf_counter[i] / tsc));
+-+			outp += print_float_value(&printed, delim, pct(p->perf_counter[i], tsc));
+- 	}
+- 
+- 	/* Added PMT Package Counters */
+-@@ -3567,12 +3575,12 @@ int format_counters(PER_THREAD_PARAMS)
+- 			break;
+- 
+- 		case PMT_TYPE_XTAL_TIME:
+--			value_converted = pct(value_raw / crystal_hz / interval_float);
+-+			value_converted = pct(value_raw / crystal_hz, interval_float);
+- 			outp += print_float_value(&printed, delim, value_converted);
+- 			break;
+- 
+- 		case PMT_TYPE_TCORE_CLOCK:
+--			value_converted = pct(value_raw / tcore_clock_freq_hz / interval_float);
+-+			value_converted = pct(value_raw / tcore_clock_freq_hz, interval_float);
+- 			outp += print_float_value(&printed, delim, value_converted);
+- 		}
+- 	}
+ diff --git a/tools/spi/.gitignore b/tools/spi/.gitignore
+ index 14ddba3d21957b..038261b34ed83c 100644
+ --- a/tools/spi/.gitignore
+diff --git a/1005_linux-6.19.6.patch b/1005_linux-6.19.6.patch
+index 341369f6..5ede6bbb 100644
+--- a/1005_linux-6.19.6.patch
++++ b/1005_linux-6.19.6.patch
+@@ -1659,18 +1659,6 @@ index fa67fda6e45b4a..c1e318bdaa3975 100644
+  
+  	X86_MATCH_VFM(INTEL_BROADWELL,		&snb_cstates),
+  	X86_MATCH_VFM(INTEL_BROADWELL_D,	&snb_cstates),
+-diff --git a/arch/x86/events/msr.c b/arch/x86/events/msr.c
+-index 7f5007a4752a17..8052596b850364 100644
+---- a/arch/x86/events/msr.c
+-+++ b/arch/x86/events/msr.c
+-@@ -78,6 +78,7 @@ static bool test_intel(int idx, void *data)
+- 	case INTEL_ATOM_SILVERMONT:
+- 	case INTEL_ATOM_SILVERMONT_D:
+- 	case INTEL_ATOM_AIRMONT:
+-+	case INTEL_ATOM_AIRMONT_NP:
+- 
+- 	case INTEL_ATOM_GOLDMONT:
+- 	case INTEL_ATOM_GOLDMONT_D:
+ diff --git a/arch/x86/hyperv/hv_init.c b/arch/x86/hyperv/hv_init.c
+ index 14de43f4bc6c18..7f3301bd081ec5 100644
+ --- a/arch/x86/hyperv/hv_init.c
+@@ -4177,62 +4165,6 @@ index d837bee72b1780..5573d7188406bb 100644
+  
+  #define ZL_REG_REF_SYNC_CTRL			ZL_REG(10, 0x2e, 1)
+  #define ZL_REF_SYNC_CTRL_MODE			GENMASK(2, 0)
+-diff --git a/drivers/edac/igen6_edac.c b/drivers/edac/igen6_edac.c
+-index 553c31a2d9226f..f2c9270c1893c8 100644
+---- a/drivers/edac/igen6_edac.c
+-+++ b/drivers/edac/igen6_edac.c
+-@@ -246,6 +246,8 @@ static struct work_struct ecclog_work;
+- 
+- /* Compute did IDs for Amston Lake with IBECC */
+- #define DID_ASL_SKU1	0x464a
+-+#define DID_ASL_SKU2	0x4646
+-+#define DID_ASL_SKU3	0x4652
+- 
+- /* Compute die IDs for Raptor Lake-P with IBECC */
+- #define DID_RPL_P_SKU1	0xa706
+-@@ -274,6 +276,16 @@ static struct work_struct ecclog_work;
+- #define DID_PTL_H_SKU1	0xb000
+- #define DID_PTL_H_SKU2	0xb001
+- #define DID_PTL_H_SKU3	0xb002
+-+#define DID_PTL_H_SKU4	0xb003
+-+#define DID_PTL_H_SKU5	0xb004
+-+#define DID_PTL_H_SKU6	0xb005
+-+#define DID_PTL_H_SKU7	0xb008
+-+#define DID_PTL_H_SKU8	0xb011
+-+#define DID_PTL_H_SKU9	0xb014
+-+#define DID_PTL_H_SKU10	0xb015
+-+#define DID_PTL_H_SKU11	0xb028
+-+#define DID_PTL_H_SKU12	0xb029
+-+#define DID_PTL_H_SKU13	0xb02a
+- 
+- /* Compute die IDs for Wildcat Lake with IBECC */
+- #define DID_WCL_SKU1	0xfd00
+-@@ -618,6 +630,8 @@ static struct pci_device_id igen6_pci_tbl[] = {
+- 	{ PCI_VDEVICE(INTEL, DID_ADL_N_SKU12), (kernel_ulong_t)&adl_n_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_AZB_SKU1), (kernel_ulong_t)&adl_n_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_ASL_SKU1), (kernel_ulong_t)&adl_n_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_ASL_SKU2), (kernel_ulong_t)&adl_n_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_ASL_SKU3), (kernel_ulong_t)&adl_n_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU1), (kernel_ulong_t)&rpl_p_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU2), (kernel_ulong_t)&rpl_p_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU3), (kernel_ulong_t)&rpl_p_cfg },
+-@@ -636,6 +650,16 @@ static struct pci_device_id igen6_pci_tbl[] = {
+- 	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU1), (kernel_ulong_t)&mtl_p_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU2), (kernel_ulong_t)&mtl_p_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU3), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU4), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU5), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU6), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU7), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU8), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU9), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU10), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU11), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU12), (kernel_ulong_t)&mtl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_PTL_H_SKU13), (kernel_ulong_t)&mtl_p_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_WCL_SKU1), (kernel_ulong_t)&wcl_cfg },
+- 	{ },
+- };
+ diff --git a/drivers/firmware/arm_ffa/driver.c b/drivers/firmware/arm_ffa/driver.c
+ index c501c3104b3a4f..11a702e7f641c9 100644
+ --- a/drivers/firmware/arm_ffa/driver.c
+@@ -12388,30 +12320,6 @@ index 80fc5c0cac2fb0..be5f2b34e18aeb 100644
+  	config.reg_bits = 7;
+  	config.pad_bits = 1;
+  	config.val_bits = 8;
+-diff --git a/drivers/mfd/intel-lpss-pci.c b/drivers/mfd/intel-lpss-pci.c
+-index 8d92c895d3aeff..713a5bfb1a3c29 100644
+---- a/drivers/mfd/intel-lpss-pci.c
+-+++ b/drivers/mfd/intel-lpss-pci.c
+-@@ -437,6 +437,19 @@ static const struct pci_device_id intel_lpss_pci_ids[] = {
+- 	{ PCI_VDEVICE(INTEL, 0x5ac4), (kernel_ulong_t)&bxt_spi_info },
+- 	{ PCI_VDEVICE(INTEL, 0x5ac6), (kernel_ulong_t)&bxt_spi_info },
+- 	{ PCI_VDEVICE(INTEL, 0x5aee), (kernel_ulong_t)&bxt_uart_info },
+-+	/* NVL-S */
+-+	{ PCI_VDEVICE(INTEL, 0x6e28), (kernel_ulong_t)&bxt_uart_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e29), (kernel_ulong_t)&bxt_uart_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e2a), (kernel_ulong_t)&tgl_spi_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e2b), (kernel_ulong_t)&tgl_spi_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e4c), (kernel_ulong_t)&ehl_i2c_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e4d), (kernel_ulong_t)&ehl_i2c_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e4e), (kernel_ulong_t)&ehl_i2c_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e4f), (kernel_ulong_t)&ehl_i2c_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e5c), (kernel_ulong_t)&bxt_uart_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e5e), (kernel_ulong_t)&tgl_spi_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e7a), (kernel_ulong_t)&ehl_i2c_info },
+-+	{ PCI_VDEVICE(INTEL, 0x6e7b), (kernel_ulong_t)&ehl_i2c_info },
+- 	/* ARL-H */
+- 	{ PCI_VDEVICE(INTEL, 0x7725), (kernel_ulong_t)&bxt_uart_info },
+- 	{ PCI_VDEVICE(INTEL, 0x7726), (kernel_ulong_t)&bxt_uart_info },
+ diff --git a/drivers/mfd/macsmc.c b/drivers/mfd/macsmc.c
+ index e3893e255ce5e4..3015e8d36d6e5b 100644
+ --- a/drivers/mfd/macsmc.c
+@@ -16879,18 +16787,6 @@ index 190564e5598855..1fcf0af7cc0bbc 100644
+  		}
+  	}
+  
+-diff --git a/drivers/powercap/intel_rapl_msr.c b/drivers/powercap/intel_rapl_msr.c
+-index 152893dca5653a..3d5e7f56d68a15 100644
+---- a/drivers/powercap/intel_rapl_msr.c
+-+++ b/drivers/powercap/intel_rapl_msr.c
+-@@ -160,6 +160,7 @@ static int rapl_msr_write_raw(int cpu, struct reg_action *ra)
+- 
+- /* List of verified CPUs. */
+- static const struct x86_cpu_id pl4_support_ids[] = {
+-+	X86_MATCH_VFM(INTEL_ICELAKE_L, NULL),
+- 	X86_MATCH_VFM(INTEL_TIGERLAKE_L, NULL),
+- 	X86_MATCH_VFM(INTEL_ALDERLAKE, NULL),
+- 	X86_MATCH_VFM(INTEL_ALDERLAKE_L, NULL),
+ diff --git a/drivers/ptp/ptp_vmclock.c b/drivers/ptp/ptp_vmclock.c
+ index b3a83b03d9c14e..cbbfc494680c70 100644
+ --- a/drivers/ptp/ptp_vmclock.c
