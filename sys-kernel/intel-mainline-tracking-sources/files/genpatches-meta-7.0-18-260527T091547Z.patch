@@ -1,0 +1,823 @@
+diff --git a/1003_linux-7.0.4.patch b/1003_linux-7.0.4.patch
+index bc8f0156..ba90eb3c 100644
+--- a/1003_linux-7.0.4.patch
++++ b/1003_linux-7.0.4.patch
+@@ -4808,467 +4808,6 @@ index ec816d3b38cbd4..521531738c9af3 100644
+  		memcpy_fromio(&input, get_queue_entry(sp, reader),
+  				sizeof(struct remote_input));
+  
+-diff --git a/drivers/misc/mei/bus-fixup.c b/drivers/misc/mei/bus-fixup.c
+-index e6a1d3534663ac..bea7a47d216e06 100644
+---- a/drivers/misc/mei/bus-fixup.c
+-+++ b/drivers/misc/mei/bus-fixup.c
+-@@ -303,9 +303,9 @@ static void mei_wd(struct mei_cl_device *cldev)
+- {
+- 	struct pci_dev *pdev = to_pci_dev(cldev->dev.parent);
+- 
+--	if (pdev->device == MEI_DEV_ID_WPT_LP ||
+--	    pdev->device == MEI_DEV_ID_SPT ||
+--	    pdev->device == MEI_DEV_ID_SPT_H)
+-+	if (pdev->device == PCI_DEVICE_ID_INTEL_MEI_WPT_LP ||
+-+	    pdev->device == PCI_DEVICE_ID_INTEL_MEI_SPT ||
+-+	    pdev->device == PCI_DEVICE_ID_INTEL_MEI_SPT_H)
+- 		cldev->me_cl->props.protocol_version = 0x2;
+- 
+- 	cldev->do_match = 1;
+-diff --git a/drivers/misc/mei/hw-me-regs.h b/drivers/misc/mei/hw-me-regs.h
+-index fa30899a5fa260..5967f95891a1fc 100644
+---- a/drivers/misc/mei/hw-me-regs.h
+-+++ b/drivers/misc/mei/hw-me-regs.h
+-@@ -9,120 +9,121 @@
+- /*
+-  * MEI device IDs
+-  */
+--#define MEI_DEV_ID_82946GZ    0x2974  /* 82946GZ/GL */
+--#define MEI_DEV_ID_82G35      0x2984  /* 82G35 Express */
+--#define MEI_DEV_ID_82Q965     0x2994  /* 82Q963/Q965 */
+--#define MEI_DEV_ID_82G965     0x29A4  /* 82P965/G965 */
+-+#define PCI_DEVICE_ID_INTEL_MEI_82946GZ    0x2974  /* 82946GZ/GL */
+-+#define PCI_DEVICE_ID_INTEL_MEI_82G35      0x2984  /* 82G35 Express */
+-+#define PCI_DEVICE_ID_INTEL_MEI_82Q965     0x2994  /* 82Q963/Q965 */
+-+#define PCI_DEVICE_ID_INTEL_MEI_82G965     0x29A4  /* 82P965/G965 */
+- 
+--#define MEI_DEV_ID_82GM965    0x2A04  /* Mobile PM965/GM965 */
+--#define MEI_DEV_ID_82GME965   0x2A14  /* Mobile GME965/GLE960 */
+-+#define PCI_DEVICE_ID_INTEL_MEI_82GM965    0x2A04  /* Mobile PM965/GM965 */
+-+#define PCI_DEVICE_ID_INTEL_MEI_82GME965   0x2A14  /* Mobile GME965/GLE960 */
+- 
+--#define MEI_DEV_ID_ICH9_82Q35 0x29B4  /* 82Q35 Express */
+--#define MEI_DEV_ID_ICH9_82G33 0x29C4  /* 82G33/G31/P35/P31 Express */
+--#define MEI_DEV_ID_ICH9_82Q33 0x29D4  /* 82Q33 Express */
+--#define MEI_DEV_ID_ICH9_82X38 0x29E4  /* 82X38/X48 Express */
+--#define MEI_DEV_ID_ICH9_3200  0x29F4  /* 3200/3210 Server */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_82Q35 0x29B4  /* 82Q35 Express */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_82G33 0x29C4  /* 82G33/G31/P35/P31 Express */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_82Q33 0x29D4  /* 82Q33 Express */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_82X38 0x29E4  /* 82X38/X48 Express */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_3200  0x29F4  /* 3200/3210 Server */
+- 
+--#define MEI_DEV_ID_ICH9_6     0x28B4  /* Bearlake */
+--#define MEI_DEV_ID_ICH9_7     0x28C4  /* Bearlake */
+--#define MEI_DEV_ID_ICH9_8     0x28D4  /* Bearlake */
+--#define MEI_DEV_ID_ICH9_9     0x28E4  /* Bearlake */
+--#define MEI_DEV_ID_ICH9_10    0x28F4  /* Bearlake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_6     0x28B4  /* Bearlake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_7     0x28C4  /* Bearlake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_8     0x28D4  /* Bearlake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_9     0x28E4  /* Bearlake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9_10    0x28F4  /* Bearlake */
+- 
+--#define MEI_DEV_ID_ICH9M_1    0x2A44  /* Cantiga */
+--#define MEI_DEV_ID_ICH9M_2    0x2A54  /* Cantiga */
+--#define MEI_DEV_ID_ICH9M_3    0x2A64  /* Cantiga */
+--#define MEI_DEV_ID_ICH9M_4    0x2A74  /* Cantiga */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9M_1    0x2A44  /* Cantiga */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9M_2    0x2A54  /* Cantiga */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9M_3    0x2A64  /* Cantiga */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH9M_4    0x2A74  /* Cantiga */
+- 
+--#define MEI_DEV_ID_ICH10_1    0x2E04  /* Eaglelake */
+--#define MEI_DEV_ID_ICH10_2    0x2E14  /* Eaglelake */
+--#define MEI_DEV_ID_ICH10_3    0x2E24  /* Eaglelake */
+--#define MEI_DEV_ID_ICH10_4    0x2E34  /* Eaglelake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH10_1    0x2E04  /* Eaglelake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH10_2    0x2E14  /* Eaglelake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH10_3    0x2E24  /* Eaglelake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICH10_4    0x2E34  /* Eaglelake */
+- 
+--#define MEI_DEV_ID_IBXPK_1    0x3B64  /* Calpella */
+--#define MEI_DEV_ID_IBXPK_2    0x3B65  /* Calpella */
+-+#define PCI_DEVICE_ID_INTEL_MEI_IBXPK_1    0x3B64  /* Calpella */
+-+#define PCI_DEVICE_ID_INTEL_MEI_IBXPK_2    0x3B65  /* Calpella */
+- 
+--#define MEI_DEV_ID_CPT_1      0x1C3A  /* Couger Point */
+--#define MEI_DEV_ID_PBG_1      0x1D3A  /* C600/X79 Patsburg */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CPT_1      0x1C3A  /* Couger Point */
+-+#define PCI_DEVICE_ID_INTEL_MEI_PBG_1      0x1D3A  /* C600/X79 Patsburg */
+- 
+--#define MEI_DEV_ID_PPT_1      0x1E3A  /* Panther Point */
+--#define MEI_DEV_ID_PPT_2      0x1CBA  /* Panther Point */
+--#define MEI_DEV_ID_PPT_3      0x1DBA  /* Panther Point */
+-+#define PCI_DEVICE_ID_INTEL_MEI_PPT_1      0x1E3A  /* Panther Point */
+-+#define PCI_DEVICE_ID_INTEL_MEI_PPT_2      0x1CBA  /* Panther Point */
+-+#define PCI_DEVICE_ID_INTEL_MEI_PPT_3      0x1DBA  /* Panther Point */
+- 
+--#define MEI_DEV_ID_LPT_H      0x8C3A  /* Lynx Point H */
+--#define MEI_DEV_ID_LPT_W      0x8D3A  /* Lynx Point - Wellsburg */
+--#define MEI_DEV_ID_LPT_LP     0x9C3A  /* Lynx Point LP */
+--#define MEI_DEV_ID_LPT_HR     0x8CBA  /* Lynx Point H Refresh */
+-+#define PCI_DEVICE_ID_INTEL_MEI_LPT_H      0x8C3A  /* Lynx Point H */
+-+#define PCI_DEVICE_ID_INTEL_MEI_LPT_W      0x8D3A  /* Lynx Point - Wellsburg */
+-+#define PCI_DEVICE_ID_INTEL_MEI_LPT_LP     0x9C3A  /* Lynx Point LP */
+-+#define PCI_DEVICE_ID_INTEL_MEI_LPT_HR     0x8CBA  /* Lynx Point H Refresh */
+- 
+--#define MEI_DEV_ID_WPT_LP     0x9CBA  /* Wildcat Point LP */
+--#define MEI_DEV_ID_WPT_LP_2   0x9CBB  /* Wildcat Point LP 2 */
+-+#define PCI_DEVICE_ID_INTEL_MEI_WPT_LP     0x9CBA  /* Wildcat Point LP */
+-+#define PCI_DEVICE_ID_INTEL_MEI_WPT_LP_2   0x9CBB  /* Wildcat Point LP 2 */
+- 
+--#define MEI_DEV_ID_SPT        0x9D3A  /* Sunrise Point */
+--#define MEI_DEV_ID_SPT_2      0x9D3B  /* Sunrise Point 2 */
+--#define MEI_DEV_ID_SPT_3      0x9D3E  /* Sunrise Point 3 (iToutch) */
+--#define MEI_DEV_ID_SPT_H      0xA13A  /* Sunrise Point H */
+--#define MEI_DEV_ID_SPT_H_2    0xA13B  /* Sunrise Point H 2 */
+-+#define PCI_DEVICE_ID_INTEL_MEI_SPT        0x9D3A  /* Sunrise Point */
+-+#define PCI_DEVICE_ID_INTEL_MEI_SPT_2      0x9D3B  /* Sunrise Point 2 */
+-+#define PCI_DEVICE_ID_INTEL_MEI_SPT_3      0x9D3E  /* Sunrise Point 3 (iToutch) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_SPT_H      0xA13A  /* Sunrise Point H */
+-+#define PCI_DEVICE_ID_INTEL_MEI_SPT_H_2    0xA13B  /* Sunrise Point H 2 */
+- 
+--#define MEI_DEV_ID_LBG        0xA1BA  /* Lewisburg (SPT) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_LBG        0xA1BA  /* Lewisburg (SPT) */
+- 
+--#define MEI_DEV_ID_BXT_M      0x1A9A  /* Broxton M */
+--#define MEI_DEV_ID_APL_I      0x5A9A  /* Apollo Lake I */
+-+#define PCI_DEVICE_ID_INTEL_MEI_BXT_M      0x1A9A  /* Broxton M */
+-+#define PCI_DEVICE_ID_INTEL_MEI_APL_I      0x5A9A  /* Apollo Lake I */
+- 
+--#define MEI_DEV_ID_DNV_IE     0x19E5  /* Denverton IE */
+-+#define PCI_DEVICE_ID_INTEL_MEI_DNV_IE     0x19E5  /* Denverton IE */
+- 
+--#define MEI_DEV_ID_GLK        0x319A  /* Gemini Lake */
+-+#define PCI_DEVICE_ID_INTEL_MEI_GLK        0x319A  /* Gemini Lake */
+- 
+--#define MEI_DEV_ID_KBP        0xA2BA  /* Kaby Point */
+--#define MEI_DEV_ID_KBP_2      0xA2BB  /* Kaby Point 2 */
+--#define MEI_DEV_ID_KBP_3      0xA2BE  /* Kaby Point 3 (iTouch) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_KBP        0xA2BA  /* Kaby Point */
+-+#define PCI_DEVICE_ID_INTEL_MEI_KBP_2      0xA2BB  /* Kaby Point 2 */
+-+#define PCI_DEVICE_ID_INTEL_MEI_KBP_3      0xA2BE  /* Kaby Point 3 (iTouch) */
+- 
+--#define MEI_DEV_ID_CNP_LP     0x9DE0  /* Cannon Point LP */
+--#define MEI_DEV_ID_CNP_LP_3   0x9DE4  /* Cannon Point LP 3 (iTouch) */
+--#define MEI_DEV_ID_CNP_H      0xA360  /* Cannon Point H */
+--#define MEI_DEV_ID_CNP_H_3    0xA364  /* Cannon Point H 3 (iTouch) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CNP_LP     0x9DE0  /* Cannon Point LP */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CNP_LP_3   0x9DE4  /* Cannon Point LP 3 (iTouch) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CNP_H      0xA360  /* Cannon Point H */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CNP_H_3    0xA364  /* Cannon Point H 3 (iTouch) */
+- 
+--#define MEI_DEV_ID_CMP_LP     0x02e0  /* Comet Point LP */
+--#define MEI_DEV_ID_CMP_LP_3   0x02e4  /* Comet Point LP 3 (iTouch) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CMP_LP     0x02e0  /* Comet Point LP */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CMP_LP_3   0x02e4  /* Comet Point LP 3 (iTouch) */
+- 
+--#define MEI_DEV_ID_CMP_V      0xA3BA  /* Comet Point Lake V */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CMP_V      0xA3BA  /* Comet Point Lake V */
+- 
+--#define MEI_DEV_ID_CMP_H      0x06e0  /* Comet Lake H */
+--#define MEI_DEV_ID_CMP_H_3    0x06e4  /* Comet Lake H 3 (iTouch) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CMP_H      0x06e0  /* Comet Lake H */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CMP_H_3    0x06e4  /* Comet Lake H 3 (iTouch) */
+- 
+--#define MEI_DEV_ID_CDF        0x18D3  /* Cedar Fork */
+-+#define PCI_DEVICE_ID_INTEL_MEI_CDF        0x18D3  /* Cedar Fork */
+- 
+--#define MEI_DEV_ID_ICP_LP     0x34E0  /* Ice Lake Point LP */
+--#define MEI_DEV_ID_ICP_N      0x38E0  /* Ice Lake Point N */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICP_LP     0x34E0  /* Ice Lake Point LP */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ICP_N      0x38E0  /* Ice Lake Point N */
+- 
+--#define MEI_DEV_ID_JSP_N      0x4DE0  /* Jasper Lake Point N */
+-+#define PCI_DEVICE_ID_INTEL_MEI_JSP_N      0x4DE0  /* Jasper Lake Point N */
+- 
+--#define MEI_DEV_ID_TGP_LP     0xA0E0  /* Tiger Lake Point LP */
+--#define MEI_DEV_ID_TGP_H      0x43E0  /* Tiger Lake Point H */
+-+#define PCI_DEVICE_ID_INTEL_MEI_TGP_LP     0xA0E0  /* Tiger Lake Point LP */
+-+#define PCI_DEVICE_ID_INTEL_MEI_TGP_H      0x43E0  /* Tiger Lake Point H */
+- 
+--#define MEI_DEV_ID_MCC        0x4B70  /* Mule Creek Canyon (EHL) */
+--#define MEI_DEV_ID_MCC_4      0x4B75  /* Mule Creek Canyon 4 (EHL) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_MCC        0x4B70  /* Mule Creek Canyon (EHL) */
+-+#define PCI_DEVICE_ID_INTEL_MEI_MCC_4      0x4B75  /* Mule Creek Canyon 4 (EHL) */
+- 
+--#define MEI_DEV_ID_EBG        0x1BE0  /* Emmitsburg WS */
+-+#define PCI_DEVICE_ID_INTEL_MEI_EBG        0x1BE0  /* Emmitsburg WS */
+- 
+--#define MEI_DEV_ID_ADP_S      0x7AE8  /* Alder Lake Point S */
+--#define MEI_DEV_ID_ADP_LP     0x7A60  /* Alder Lake Point LP */
+--#define MEI_DEV_ID_ADP_P      0x51E0  /* Alder Lake Point P */
+--#define MEI_DEV_ID_ADP_N      0x54E0  /* Alder Lake Point N */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ADP_S      0x7AE8  /* Alder Lake Point S */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ADP_LP     0x7A60  /* Alder Lake Point LP */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ADP_P      0x51E0  /* Alder Lake Point P */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ADP_N      0x54E0  /* Alder Lake Point N */
+- 
+--#define MEI_DEV_ID_RPL_S      0x7A68  /* Raptor Lake Point S */
+-+#define PCI_DEVICE_ID_INTEL_MEI_RPL_S      0x7A68  /* Raptor Lake Point S */
+- 
+--#define MEI_DEV_ID_MTL_M      0x7E70  /* Meteor Lake Point M */
+--#define MEI_DEV_ID_ARL_S      0x7F68  /* Arrow Lake Point S */
+--#define MEI_DEV_ID_ARL_H      0x7770  /* Arrow Lake Point H */
+-+#define PCI_DEVICE_ID_INTEL_MEI_MTL_M      0x7E70  /* Meteor Lake Point M */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ARL_S      0x7F68  /* Arrow Lake Point S */
+-+#define PCI_DEVICE_ID_INTEL_MEI_ARL_H      0x7770  /* Arrow Lake Point H */
+- 
+--#define MEI_DEV_ID_LNL_M      0xA870  /* Lunar Lake Point M */
+-+#define PCI_DEVICE_ID_INTEL_MEI_LNL_M      0xA870  /* Lunar Lake Point M */
+- 
+--#define MEI_DEV_ID_PTL_H      0xE370  /* Panther Lake H */
+--#define MEI_DEV_ID_PTL_P      0xE470  /* Panther Lake P */
+-+#define PCI_DEVICE_ID_INTEL_MEI_PTL_H      0xE370  /* Panther Lake H */
+-+#define PCI_DEVICE_ID_INTEL_MEI_PTL_P      0xE470  /* Panther Lake P */
+- 
+--#define MEI_DEV_ID_WCL_P      0x4D70  /* Wildcat Lake P */
+-+#define PCI_DEVICE_ID_INTEL_MEI_WCL_P      0x4D70  /* Wildcat Lake P */
+- 
+--#define MEI_DEV_ID_NVL_S      0x6E68  /* Nova Lake Point S */
+-+#define PCI_DEVICE_ID_INTEL_MEI_NVL_S      0x6E68  /* Nova Lake Point S */
+-+#define PCI_DEVICE_ID_INTEL_MEI_NVL_H      0xD370  /* Nova Lake Point H */
+- 
+- /*
+-  * MEI HW Section
+-diff --git a/drivers/misc/mei/hw-me.h b/drivers/misc/mei/hw-me.h
+-index 204b92af6c4785..843ec2497b523a 100644
+---- a/drivers/misc/mei/hw-me.h
+-+++ b/drivers/misc/mei/hw-me.h
+-@@ -33,12 +33,6 @@ struct mei_cfg {
+- 	u32 hw_trc_supported:1;
+- };
+- 
+--
+--#define MEI_PCI_DEVICE(dev, cfg) \
+--	.vendor = PCI_VENDOR_ID_INTEL, .device = (dev), \
+--	.subvendor = PCI_ANY_ID, .subdevice = PCI_ANY_ID, \
+--	.driver_data = (kernel_ulong_t)(cfg),
+--
+- #define MEI_ME_RPM_TIMEOUT    500 /* ms */
+- 
+- /**
+-diff --git a/drivers/misc/mei/pci-me.c b/drivers/misc/mei/pci-me.c
+-index 2a6e569558b943..5b6aaa4d3a1cb9 100644
+---- a/drivers/misc/mei/pci-me.c
+-+++ b/drivers/misc/mei/pci-me.c
+-@@ -26,110 +26,111 @@
+- 
+- /* mei_pci_tbl - PCI Device ID Table */
+- static const struct pci_device_id mei_me_pci_tbl[] = {
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_82946GZ, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_82G35, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_82Q965, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_82G965, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_82GM965, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_82GME965, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_82Q35, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_82G33, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_82Q33, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_82X38, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_3200, MEI_ME_ICH_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_6, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_7, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_8, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_9, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9_10, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9M_1, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9M_2, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9M_3, MEI_ME_ICH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH9M_4, MEI_ME_ICH_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH10_1, MEI_ME_ICH10_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH10_2, MEI_ME_ICH10_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH10_3, MEI_ME_ICH10_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICH10_4, MEI_ME_ICH10_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_IBXPK_1, MEI_ME_PCH6_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_IBXPK_2, MEI_ME_PCH6_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CPT_1, MEI_ME_PCH_CPT_PBG_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_PBG_1, MEI_ME_PCH_CPT_PBG_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_PPT_1, MEI_ME_PCH7_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_PPT_2, MEI_ME_PCH7_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_PPT_3, MEI_ME_PCH7_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_LPT_H, MEI_ME_PCH8_SPS_4_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_LPT_W, MEI_ME_PCH8_SPS_4_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_LPT_LP, MEI_ME_PCH8_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_LPT_HR, MEI_ME_PCH8_SPS_4_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_WPT_LP, MEI_ME_PCH8_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_WPT_LP_2, MEI_ME_PCH8_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_SPT, MEI_ME_PCH8_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_SPT_2, MEI_ME_PCH8_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_SPT_3, MEI_ME_PCH8_ITOUCH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_SPT_H, MEI_ME_PCH8_SPS_4_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_SPT_H_2, MEI_ME_PCH8_SPS_4_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_LBG, MEI_ME_PCH12_SPS_4_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_BXT_M, MEI_ME_PCH8_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_APL_I, MEI_ME_PCH8_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_DNV_IE, MEI_ME_PCH8_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_GLK, MEI_ME_PCH8_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_KBP, MEI_ME_PCH8_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_KBP_2, MEI_ME_PCH8_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_KBP_3, MEI_ME_PCH8_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CNP_LP, MEI_ME_PCH12_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CNP_LP_3, MEI_ME_PCH8_ITOUCH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CNP_H, MEI_ME_PCH12_SPS_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CNP_H_3, MEI_ME_PCH12_SPS_ITOUCH_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CMP_LP, MEI_ME_PCH12_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CMP_LP_3, MEI_ME_PCH8_ITOUCH_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CMP_V, MEI_ME_PCH12_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CMP_H, MEI_ME_PCH12_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CMP_H_3, MEI_ME_PCH8_ITOUCH_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICP_LP, MEI_ME_PCH12_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ICP_N, MEI_ME_PCH12_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_TGP_LP, MEI_ME_PCH15_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_TGP_H, MEI_ME_PCH15_SPS_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_JSP_N, MEI_ME_PCH15_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_MCC, MEI_ME_PCH15_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_MCC_4, MEI_ME_PCH8_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_CDF, MEI_ME_PCH8_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_EBG, MEI_ME_PCH15_SPS_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ADP_S, MEI_ME_PCH15_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ADP_LP, MEI_ME_PCH15_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ADP_P, MEI_ME_PCH15_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ADP_N, MEI_ME_PCH15_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_RPL_S, MEI_ME_PCH15_SPS_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_MTL_M, MEI_ME_PCH15_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ARL_S, MEI_ME_PCH15_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_ARL_H, MEI_ME_PCH15_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_LNL_M, MEI_ME_PCH15_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_PTL_H, MEI_ME_PCH15_CFG)},
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_PTL_P, MEI_ME_PCH15_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_WCL_P, MEI_ME_PCH15_CFG)},
+--
+--	{MEI_PCI_DEVICE(MEI_DEV_ID_NVL_S, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_82946GZ, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_82G35, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_82Q965, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_82G965, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_82GM965, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_82GME965, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_82Q35, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_82G33, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_82Q33, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_82X38, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_3200, MEI_ME_ICH_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_6, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_7, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_8, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_9, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9_10, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9M_1, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9M_2, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9M_3, MEI_ME_ICH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH9M_4, MEI_ME_ICH_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH10_1, MEI_ME_ICH10_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH10_2, MEI_ME_ICH10_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH10_3, MEI_ME_ICH10_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICH10_4, MEI_ME_ICH10_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_IBXPK_1, MEI_ME_PCH6_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_IBXPK_2, MEI_ME_PCH6_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CPT_1, MEI_ME_PCH_CPT_PBG_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_PBG_1, MEI_ME_PCH_CPT_PBG_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_PPT_1, MEI_ME_PCH7_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_PPT_2, MEI_ME_PCH7_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_PPT_3, MEI_ME_PCH7_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_LPT_H, MEI_ME_PCH8_SPS_4_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_LPT_W, MEI_ME_PCH8_SPS_4_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_LPT_LP, MEI_ME_PCH8_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_LPT_HR, MEI_ME_PCH8_SPS_4_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_WPT_LP, MEI_ME_PCH8_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_WPT_LP_2, MEI_ME_PCH8_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_SPT, MEI_ME_PCH8_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_SPT_2, MEI_ME_PCH8_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_SPT_3, MEI_ME_PCH8_ITOUCH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_SPT_H, MEI_ME_PCH8_SPS_4_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_SPT_H_2, MEI_ME_PCH8_SPS_4_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_LBG, MEI_ME_PCH12_SPS_4_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_BXT_M, MEI_ME_PCH8_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_APL_I, MEI_ME_PCH8_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_DNV_IE, MEI_ME_PCH8_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_GLK, MEI_ME_PCH8_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_KBP, MEI_ME_PCH8_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_KBP_2, MEI_ME_PCH8_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_KBP_3, MEI_ME_PCH8_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CNP_LP, MEI_ME_PCH12_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CNP_LP_3, MEI_ME_PCH8_ITOUCH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CNP_H, MEI_ME_PCH12_SPS_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CNP_H_3, MEI_ME_PCH12_SPS_ITOUCH_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CMP_LP, MEI_ME_PCH12_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CMP_LP_3, MEI_ME_PCH8_ITOUCH_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CMP_V, MEI_ME_PCH12_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CMP_H, MEI_ME_PCH12_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CMP_H_3, MEI_ME_PCH8_ITOUCH_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICP_LP, MEI_ME_PCH12_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ICP_N, MEI_ME_PCH12_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_TGP_LP, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_TGP_H, MEI_ME_PCH15_SPS_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_JSP_N, MEI_ME_PCH15_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_MCC, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_MCC_4, MEI_ME_PCH8_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_CDF, MEI_ME_PCH8_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_EBG, MEI_ME_PCH15_SPS_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ADP_S, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ADP_LP, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ADP_P, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ADP_N, MEI_ME_PCH15_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_RPL_S, MEI_ME_PCH15_SPS_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_MTL_M, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ARL_S, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_ARL_H, MEI_ME_PCH15_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_LNL_M, MEI_ME_PCH15_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_PTL_H, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_PTL_P, MEI_ME_PCH15_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_WCL_P, MEI_ME_PCH15_CFG)},
+-+
+-+	{PCI_DEVICE_DATA(INTEL, MEI_NVL_S, MEI_ME_PCH15_CFG)},
+-+	{PCI_DEVICE_DATA(INTEL, MEI_NVL_H, MEI_ME_PCH15_CFG)},
+- 
+- 	/* required last entry */
+- 	{0, }
+ diff --git a/drivers/mmc/core/block.c b/drivers/mmc/core/block.c
+ index 05ee76cb0a08e9..db8c99c73a6173 100644
+ --- a/drivers/mmc/core/block.c
+@@ -9183,39 +8722,6 @@ index 578b8038b21178..573f2df3a2c998 100644
+  	EM(rxkad_abort_2_short_data,		"rxkad2-short-data")	\
+  	EM(rxkad_abort_2_short_header,		"rxkad2-short-hdr")	\
+  	EM(rxkad_abort_2_short_len,		"rxkad2-short-len")	\
+-@@ -161,8 +162,6 @@
+- 	E_(rxrpc_call_poke_timer_now,		"Timer-now")
+- 
+- #define rxrpc_skb_traces \
+--	EM(rxrpc_skb_eaten_by_unshare,		"ETN unshare  ") \
+--	EM(rxrpc_skb_eaten_by_unshare_nomem,	"ETN unshar-nm") \
+- 	EM(rxrpc_skb_get_call_rx,		"GET call-rx  ") \
+- 	EM(rxrpc_skb_get_conn_secured,		"GET conn-secd") \
+- 	EM(rxrpc_skb_get_conn_work,		"GET conn-work") \
+-@@ -189,6 +188,7 @@
+- 	EM(rxrpc_skb_put_purge,			"PUT purge    ") \
+- 	EM(rxrpc_skb_put_purge_oob,		"PUT purge-oob") \
+- 	EM(rxrpc_skb_put_response,		"PUT response ") \
+-+	EM(rxrpc_skb_put_response_copy,		"PUT resp-cpy ") \
+- 	EM(rxrpc_skb_put_rotate,		"PUT rotate   ") \
+- 	EM(rxrpc_skb_put_unknown,		"PUT unknown  ") \
+- 	EM(rxrpc_skb_see_conn_work,		"SEE conn-work") \
+-@@ -197,6 +197,7 @@
+- 	EM(rxrpc_skb_see_recvmsg_oob,		"SEE recvm-oob") \
+- 	EM(rxrpc_skb_see_reject,		"SEE reject   ") \
+- 	EM(rxrpc_skb_see_rotate,		"SEE rotate   ") \
+-+	EM(rxrpc_skb_see_unshare_nomem,		"SEE unshar-nm") \
+- 	E_(rxrpc_skb_see_version,		"SEE version  ")
+- 
+- #define rxrpc_local_traces \
+-@@ -284,7 +285,6 @@
+- 	EM(rxrpc_conn_put_unidle,		"PUT unidle  ") \
+- 	EM(rxrpc_conn_put_work,			"PUT work    ") \
+- 	EM(rxrpc_conn_queue_challenge,		"QUE chall   ") \
+--	EM(rxrpc_conn_queue_retry_work,		"QUE retry-wk") \
+- 	EM(rxrpc_conn_queue_rx_work,		"QUE rx-work ") \
+- 	EM(rxrpc_conn_see_new_service_conn,	"SEE new-svc ") \
+- 	EM(rxrpc_conn_see_reap_service,		"SEE reap-svc") \
+ diff --git a/include/uapi/linux/landlock.h b/include/uapi/linux/landlock.h
+ index f88fa1f68b770b..d37603efc273fd 100644
+ --- a/include/uapi/linux/landlock.h
+@@ -11751,178 +11257,6 @@ index aa6465dc742c2d..61fb6e45281bf1 100644
+  		ret = -EFAULT;
+  		goto out;
+  	}
+-diff --git a/net/rxrpc/ar-internal.h b/net/rxrpc/ar-internal.h
+-index 96ecb83c907153..27c2aa2dd023c5 100644
+---- a/net/rxrpc/ar-internal.h
+-+++ b/net/rxrpc/ar-internal.h
+-@@ -1486,7 +1486,6 @@ int rxrpc_server_keyring(struct rxrpc_sock *, sockptr_t, int);
+- void rxrpc_kernel_data_consumed(struct rxrpc_call *, struct sk_buff *);
+- void rxrpc_new_skb(struct sk_buff *, enum rxrpc_skb_trace);
+- void rxrpc_see_skb(struct sk_buff *, enum rxrpc_skb_trace);
+--void rxrpc_eaten_skb(struct sk_buff *, enum rxrpc_skb_trace);
+- void rxrpc_get_skb(struct sk_buff *, enum rxrpc_skb_trace);
+- void rxrpc_free_skb(struct sk_buff *, enum rxrpc_skb_trace);
+- void rxrpc_purge_queue(struct sk_buff_head *);
+-diff --git a/net/rxrpc/call_event.c b/net/rxrpc/call_event.c
+-index fec59d9338b9fb..fdd683261226cf 100644
+---- a/net/rxrpc/call_event.c
+-+++ b/net/rxrpc/call_event.c
+-@@ -332,7 +332,25 @@ bool rxrpc_input_call_event(struct rxrpc_call *call)
+- 
+- 			saw_ack |= sp->hdr.type == RXRPC_PACKET_TYPE_ACK;
+- 
+--			rxrpc_input_call_packet(call, skb);
+-+			if (sp->hdr.type == RXRPC_PACKET_TYPE_DATA &&
+-+			    sp->hdr.securityIndex != 0 &&
+-+			    skb_cloned(skb)) {
+-+				/* Unshare the packet so that it can be
+-+				 * modified by in-place decryption.
+-+				 */
+-+				struct sk_buff *nskb = skb_copy(skb, GFP_ATOMIC);
+-+
+-+				if (nskb) {
+-+					rxrpc_new_skb(nskb, rxrpc_skb_new_unshared);
+-+					rxrpc_input_call_packet(call, nskb);
+-+					rxrpc_free_skb(nskb, rxrpc_skb_put_call_rx);
+-+				} else {
+-+					/* OOM - Drop the packet. */
+-+					rxrpc_see_skb(skb, rxrpc_skb_see_unshare_nomem);
+-+				}
+-+			} else {
+-+				rxrpc_input_call_packet(call, skb);
+-+			}
+- 			rxrpc_free_skb(skb, rxrpc_skb_put_call_rx);
+- 			did_receive = true;
+- 		}
+-diff --git a/net/rxrpc/conn_event.c b/net/rxrpc/conn_event.c
+-index 9a41ec708aeb9f..a2130d25aaa9b7 100644
+---- a/net/rxrpc/conn_event.c
+-+++ b/net/rxrpc/conn_event.c
+-@@ -240,6 +240,33 @@ static void rxrpc_call_is_secure(struct rxrpc_call *call)
+- 		rxrpc_notify_socket(call);
+- }
+- 
+-+static int rxrpc_verify_response(struct rxrpc_connection *conn,
+-+				 struct sk_buff *skb)
+-+{
+-+	int ret;
+-+
+-+	if (skb_cloned(skb)) {
+-+		/* Copy the packet if shared so that we can do in-place
+-+		 * decryption.
+-+		 */
+-+		struct sk_buff *nskb = skb_copy(skb, GFP_NOFS);
+-+
+-+		if (nskb) {
+-+			rxrpc_new_skb(nskb, rxrpc_skb_new_unshared);
+-+			ret = conn->security->verify_response(conn, nskb);
+-+			rxrpc_free_skb(nskb, rxrpc_skb_put_response_copy);
+-+		} else {
+-+			/* OOM - Drop the packet. */
+-+			rxrpc_see_skb(skb, rxrpc_skb_see_unshare_nomem);
+-+			ret = -ENOMEM;
+-+		}
+-+	} else {
+-+		ret = conn->security->verify_response(conn, skb);
+-+	}
+-+
+-+	return ret;
+-+}
+-+
+- /*
+-  * connection-level Rx packet processor
+-  */
+-@@ -270,7 +297,7 @@ static int rxrpc_process_event(struct rxrpc_connection *conn,
+- 		}
+- 		spin_unlock_irq(&conn->state_lock);
+- 
+--		ret = conn->security->verify_response(conn, skb);
+-+		ret = rxrpc_verify_response(conn, skb);
+- 		if (ret < 0)
+- 			return ret;
+- 
+-@@ -362,7 +389,6 @@ again:
+- static void rxrpc_do_process_connection(struct rxrpc_connection *conn)
+- {
+- 	struct sk_buff *skb;
+--	int ret;
+- 
+- 	if (test_and_clear_bit(RXRPC_CONN_EV_CHALLENGE, &conn->events))
+- 		rxrpc_secure_connection(conn);
+-@@ -371,17 +397,8 @@ static void rxrpc_do_process_connection(struct rxrpc_connection *conn)
+- 	 * connection that each one has when we've finished with it */
+- 	while ((skb = skb_dequeue(&conn->rx_queue))) {
+- 		rxrpc_see_skb(skb, rxrpc_skb_see_conn_work);
+--		ret = rxrpc_process_event(conn, skb);
+--		switch (ret) {
+--		case -ENOMEM:
+--		case -EAGAIN:
+--			skb_queue_head(&conn->rx_queue, skb);
+--			rxrpc_queue_conn(conn, rxrpc_conn_queue_retry_work);
+--			break;
+--		default:
+--			rxrpc_free_skb(skb, rxrpc_skb_put_conn_work);
+--			break;
+--		}
+-+		rxrpc_process_event(conn, skb);
+-+		rxrpc_free_skb(skb, rxrpc_skb_put_conn_work);
+- 	}
+- }
+- 
+-diff --git a/net/rxrpc/io_thread.c b/net/rxrpc/io_thread.c
+-index 69795693192521..dc5184a2fa9d1a 100644
+---- a/net/rxrpc/io_thread.c
+-+++ b/net/rxrpc/io_thread.c
+-@@ -192,13 +192,12 @@ static bool rxrpc_extract_abort(struct sk_buff *skb)
+- /*
+-  * Process packets received on the local endpoint
+-  */
+--static bool rxrpc_input_packet(struct rxrpc_local *local, struct sk_buff **_skb)
+-+static bool rxrpc_input_packet(struct rxrpc_local *local, struct sk_buff *skb)
+- {
+- 	struct rxrpc_connection *conn;
+- 	struct sockaddr_rxrpc peer_srx;
+- 	struct rxrpc_skb_priv *sp;
+- 	struct rxrpc_peer *peer = NULL;
+--	struct sk_buff *skb = *_skb;
+- 	bool ret = false;
+- 
+- 	skb_pull(skb, sizeof(struct udphdr));
+-@@ -244,25 +243,6 @@ static bool rxrpc_input_packet(struct rxrpc_local *local, struct sk_buff **_skb)
+- 			return rxrpc_bad_message(skb, rxrpc_badmsg_zero_call);
+- 		if (sp->hdr.seq == 0)
+- 			return rxrpc_bad_message(skb, rxrpc_badmsg_zero_seq);
+--
+--		/* Unshare the packet so that it can be modified for in-place
+--		 * decryption.
+--		 */
+--		if (sp->hdr.securityIndex != 0) {
+--			skb = skb_unshare(skb, GFP_ATOMIC);
+--			if (!skb) {
+--				rxrpc_eaten_skb(*_skb, rxrpc_skb_eaten_by_unshare_nomem);
+--				*_skb = NULL;
+--				return just_discard;
+--			}
+--
+--			if (skb != *_skb) {
+--				rxrpc_eaten_skb(*_skb, rxrpc_skb_eaten_by_unshare);
+--				*_skb = skb;
+--				rxrpc_new_skb(skb, rxrpc_skb_new_unshared);
+--				sp = rxrpc_skb(skb);
+--			}
+--		}
+- 		break;
+- 
+- 	case RXRPC_PACKET_TYPE_CHALLENGE:
+-@@ -494,7 +474,7 @@ int rxrpc_io_thread(void *data)
+- 			switch (skb->mark) {
+- 			case RXRPC_SKB_MARK_PACKET:
+- 				skb->priority = 0;
+--				if (!rxrpc_input_packet(local, &skb))
+-+				if (!rxrpc_input_packet(local, skb))
+- 					rxrpc_reject_packet(local, skb);
+- 				trace_rxrpc_rx_done(skb->mark, skb->priority);
+- 				rxrpc_free_skb(skb, rxrpc_skb_put_input);
+ diff --git a/net/rxrpc/rxgk_app.c b/net/rxrpc/rxgk_app.c
+ index 30275cb5ba3e25..0ef2a29eb69581 100644
+ --- a/net/rxrpc/rxgk_app.c
+@@ -12181,26 +11515,6 @@ index eb7f2769d2b121..cba7935977f0ba 100644
+  	return ret;
+  }
+  
+-diff --git a/net/rxrpc/skbuff.c b/net/rxrpc/skbuff.c
+-index 3bcd6ee803960b..e2169d1a14b5fd 100644
+---- a/net/rxrpc/skbuff.c
+-+++ b/net/rxrpc/skbuff.c
+-@@ -46,15 +46,6 @@ void rxrpc_get_skb(struct sk_buff *skb, enum rxrpc_skb_trace why)
+- 	skb_get(skb);
+- }
+- 
+--/*
+-- * Note the dropping of a ref on a socket buffer by the core.
+-- */
+--void rxrpc_eaten_skb(struct sk_buff *skb, enum rxrpc_skb_trace why)
+--{
+--	int n = atomic_inc_return(&rxrpc_n_rx_skbs);
+--	trace_rxrpc_skb(skb, 0, n, why);
+--}
+--
+- /*
+-  * Note the destruction of a socket buffer.
+-  */
+ diff --git a/net/smc/smc_clc.c b/net/smc/smc_clc.c
+ index c38fc7bf0a7efb..014d527d5462db 100644
+ --- a/net/smc/smc_clc.c
+diff --git a/1004_linux-7.0.5.patch b/1004_linux-7.0.5.patch
+index 8b4ee320..9b9e3df8 100644
+--- a/1004_linux-7.0.5.patch
++++ b/1004_linux-7.0.5.patch
+@@ -10,58 +10,4 @@ index 316c0c4ebe5cba..6694d125285e89 100644
+ +SUBLEVEL = 5
+  EXTRAVERSION =
+  NAME = Baby Opossum Posse
+- 
+-diff --git a/net/ipv4/esp4.c b/net/ipv4/esp4.c
+-index 6dfc0bcdef6542..6a5febbdbee493 100644
+---- a/net/ipv4/esp4.c
+-+++ b/net/ipv4/esp4.c
+-@@ -873,7 +873,8 @@ static int esp_input(struct xfrm_state *x, struct sk_buff *skb)
+- 			nfrags = 1;
+- 
+- 			goto skip_cow;
+--		} else if (!skb_has_frag_list(skb)) {
+-+		} else if (!skb_has_frag_list(skb) &&
+-+			   !skb_has_shared_frag(skb)) {
+- 			nfrags = skb_shinfo(skb)->nr_frags;
+- 			nfrags++;
+- 
+-diff --git a/net/ipv4/ip_output.c b/net/ipv4/ip_output.c
+-index e4790cc7b5c2ec..5bcd73cbdb41c0 100644
+---- a/net/ipv4/ip_output.c
+-+++ b/net/ipv4/ip_output.c
+-@@ -1233,6 +1233,8 @@ alloc_new_skb:
+- 			if (err < 0)
+- 				goto error;
+- 			copy = err;
+-+			if (!(flags & MSG_NO_SHARED_FRAGS))
+-+				skb_shinfo(skb)->flags |= SKBFL_SHARED_FRAG;
+- 			wmem_alloc_delta += copy;
+- 		} else if (!zc) {
+- 			int i = skb_shinfo(skb)->nr_frags;
+-diff --git a/net/ipv6/esp6.c b/net/ipv6/esp6.c
+-index 9f75313734f8cd..9c06c5a1419dc4 100644
+---- a/net/ipv6/esp6.c
+-+++ b/net/ipv6/esp6.c
+-@@ -915,7 +915,8 @@ static int esp6_input(struct xfrm_state *x, struct sk_buff *skb)
+- 			nfrags = 1;
+- 
+- 			goto skip_cow;
+--		} else if (!skb_has_frag_list(skb)) {
+-+		} else if (!skb_has_frag_list(skb) &&
+-+			   !skb_has_shared_frag(skb)) {
+- 			nfrags = skb_shinfo(skb)->nr_frags;
+- 			nfrags++;
+- 
+-diff --git a/net/ipv6/ip6_output.c b/net/ipv6/ip6_output.c
+-index 8e2a6b28cea7ae..3f14e363c96e20 100644
+---- a/net/ipv6/ip6_output.c
+-+++ b/net/ipv6/ip6_output.c
+-@@ -1765,6 +1765,8 @@ alloc_new_skb:
+- 			if (err < 0)
+- 				goto error;
+- 			copy = err;
+-+			if (!(flags & MSG_NO_SHARED_FRAGS))
+-+				skb_shinfo(skb)->flags |= SKBFL_SHARED_FRAG;
+- 			wmem_alloc_delta += copy;
+- 		} else if (!zc) {
+- 			int i = skb_shinfo(skb)->nr_frags;
++ 
+\ No newline at end of file
+diff --git a/1005_linux-7.0.6.patch b/1005_linux-7.0.6.patch
+index ef2a8489..f2d2bdf6 100644
+--- a/1005_linux-7.0.6.patch
++++ b/1005_linux-7.0.6.patch
+@@ -10,33 +10,4 @@ index 6694d125285e89..dbc380a9339ee7 100644
+ +SUBLEVEL = 6
+  EXTRAVERSION =
+  NAME = Baby Opossum Posse
+- 
+-diff --git a/net/rxrpc/call_event.c b/net/rxrpc/call_event.c
+-index fdd683261226cf..2b19b252225e55 100644
+---- a/net/rxrpc/call_event.c
+-+++ b/net/rxrpc/call_event.c
+-@@ -334,7 +334,9 @@ bool rxrpc_input_call_event(struct rxrpc_call *call)
+- 
+- 			if (sp->hdr.type == RXRPC_PACKET_TYPE_DATA &&
+- 			    sp->hdr.securityIndex != 0 &&
+--			    skb_cloned(skb)) {
+-+			    (skb_cloned(skb) ||
+-+			     skb_has_frag_list(skb) ||
+-+			     skb_has_shared_frag(skb))) {
+- 				/* Unshare the packet so that it can be
+- 				 * modified by in-place decryption.
+- 				 */
+-diff --git a/net/rxrpc/conn_event.c b/net/rxrpc/conn_event.c
+-index a2130d25aaa9b7..442414d90ba1cd 100644
+---- a/net/rxrpc/conn_event.c
+-+++ b/net/rxrpc/conn_event.c
+-@@ -245,7 +245,8 @@ static int rxrpc_verify_response(struct rxrpc_connection *conn,
+- {
+- 	int ret;
+- 
+--	if (skb_cloned(skb)) {
+-+	if (skb_cloned(skb) || skb_has_frag_list(skb) ||
+-+	    skb_has_shared_frag(skb)) {
+- 		/* Copy the packet if shared so that we can do in-place
+- 		 * decryption.
+- 		 */
++ 
+\ No newline at end of file
