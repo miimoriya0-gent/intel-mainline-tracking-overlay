@@ -7,5 +7,10 @@
 	</maintainer>
 	<use>
 		<flag name="experimental">Apply experimental genpatches</flag>
+		<flag name="acpi-call">Apply CachyOS patch to enable acpi_call module for executing direct ACPI methods</flag>
+		<flag name="cgroup-vram">Apply CachyOS cgroup vRAM patch for GPU memory limits</flag>
+		<flag name="clang-polly">Apply CachyOS Clang Polly optimization patch</flag>
+		<flag name="rt-i915">Apply CachyOS real-time (RT) latency optimizations and compatibility fixes for Intel i915 graphics driver</flag>
+		<flag name="sched-bore">Apply CachyOS Burst-Oriented Response Enhancer (BORE) CPU scheduler patch</flag>
 	</use>
 </pkgmetadata>
