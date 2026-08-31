@@ -1,0 +1,21 @@
+diff --git a/1001_linux-7.2.2.patch b/1001_linux-7.2.2.patch
+index dbede699..005f6c20 100644
+--- a/1001_linux-7.2.2.patch
++++ b/1001_linux-7.2.2.patch
+@@ -29,3 +29,16 @@ index fc0cb993959f9b..c17e57ec7d5cdb 100644
+  	/* RFC5722, Section 4, amended by Errata ID : 3089
+  	 *                          When reassembling an IPv6 datagram, if
+  	 *   one or more its constituent fragments is determined to be an
++diff --git a/drivers/iommu/intel/dmar.c b/drivers/iommu/intel/dmar.c
++index 9eab8889ad50..99e016193887 100644
++--- a/drivers/iommu/intel/dmar.c
+++++ b/drivers/iommu/intel/dmar.c
++@@ -636,7 +636,7 @@ parse_dmar_table(void)
++ {
++ 	struct acpi_table_dmar *dmar;
++ 	struct acpi_table_dtpr *dtpr;
++-	void                   *txt_heap;
+++	void                   *txt_heap = NULL;
++ 	int drhd_count = 0;
++ 	int ret;
++ 	struct dmar_res_callback cb = {
