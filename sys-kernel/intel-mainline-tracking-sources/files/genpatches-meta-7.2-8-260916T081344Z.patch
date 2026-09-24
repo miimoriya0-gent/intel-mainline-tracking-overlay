@@ -1,0 +1,1599 @@
+diff --git a/1001_linux-7.2.2.patch b/1001_linux-7.2.2.patch
+index dbede699..005f6c20 100644
+--- a/1001_linux-7.2.2.patch
++++ b/1001_linux-7.2.2.patch
+@@ -29,3 +29,16 @@ index fc0cb993959f9b..c17e57ec7d5cdb 100644
+  	/* RFC5722, Section 4, amended by Errata ID : 3089
+  	 *                          When reassembling an IPv6 datagram, if
+  	 *   one or more its constituent fragments is determined to be an
++diff --git a/drivers/iommu/intel/dmar.c b/drivers/iommu/intel/dmar.c
++index 9eab8889ad50..99e016193887 100644
++--- a/drivers/iommu/intel/dmar.c
+++++ b/drivers/iommu/intel/dmar.c
++@@ -636,7 +636,7 @@ parse_dmar_table(void)
++ {
++ 	struct acpi_table_dmar *dmar;
++ 	struct acpi_table_dtpr *dtpr;
++-	void                   *txt_heap;
+++	void                   *txt_heap = NULL;
++ 	int drhd_count = 0;
++ 	int ret;
++ 	struct dmar_res_callback cb = {
+diff --git a/1004_linux-7.2.5.patch b/1004_linux-7.2.5.patch
+index 5fe23db6..4c29e71c 100644
+--- a/1004_linux-7.2.5.patch
++++ b/1004_linux-7.2.5.patch
+@@ -1972,78 +1972,6 @@ index 518a69c55e85c9..17aa38710170a3 100644
+  				 sizeof(cmd.rc) + sizeof(cmd.rrc)))
+  			r = -EFAULT;
+  		break;
+-diff --git a/arch/x86/events/intel/core.c b/arch/x86/events/intel/core.c
+-index 2b35483e2b7073..465c414f145da0 100644
+---- a/arch/x86/events/intel/core.c
+-+++ b/arch/x86/events/intel/core.c
+-@@ -7947,12 +7947,6 @@ __init int intel_pmu_init(void)
+- 
+- 	x86_add_quirk(intel_arch_events_quirk); /* Install first, so it runs last */
+- 
+--	if (version >= 5) {
+--		x86_pmu.intel_cap.anythread_deprecated = edx.split.anythread_deprecated;
+--		if (x86_pmu.intel_cap.anythread_deprecated)
+--			pr_cont(" AnyThread deprecated, ");
+--	}
+--
+- 	/* The perf side of core PMU is ready to support the mediated vPMU. */
+- 	x86_get_pmu(smp_processor_id())->capabilities |= PERF_PMU_CAP_MEDIATED_VPMU;
+- 
+-@@ -8829,8 +8823,10 @@ __init int intel_pmu_init(void)
+- 				      &x86_pmu.intel_ctrl);
+- 
+- 	/* AnyThread may be deprecated on arch perfmon v5 or later */
+--	if (x86_pmu.intel_cap.anythread_deprecated)
+-+	if (version >= 5 && edx.split.anythread_deprecated) {
+- 		x86_pmu.format_attrs = intel_arch_formats_attr;
+-+		pr_cont("AnyThread deprecated, ");
+-+	}
+- 
+- 	intel_pmu_check_event_constraints_all(NULL);
+- 
+-diff --git a/arch/x86/events/intel/lbr.c b/arch/x86/events/intel/lbr.c
+-index cae2e02fe6cc4d..52d14927a1917c 100644
+---- a/arch/x86/events/intel/lbr.c
+-+++ b/arch/x86/events/intel/lbr.c
+-@@ -1213,7 +1213,7 @@ intel_pmu_lbr_filter(struct cpu_hw_events *cpuc)
+- {
+- 	u64 from, to;
+- 	int br_sel = cpuc->br_sel;
+--	int i, j, type, to_plm;
+-+	int i, j, type, from_plm, to_plm;
+- 	bool compress = false;
+- 
+- 	/* if sampling all branches, then nothing to filter */
+-@@ -1245,8 +1245,14 @@ intel_pmu_lbr_filter(struct cpu_hw_events *cpuc)
+- 				type |= X86_BR_NO_TX;
+- 		}
+- 
+--		/* if type does not correspond, then discard */
+--		if (type == X86_BR_NONE || (br_sel & type) != type) {
+-+		from_plm = kernel_ip(from) ? X86_BR_KERNEL : X86_BR_USER;
+-+		/*
+-+		 * If type does not correspond, then discard.
+-+		 * Specifically reject entries whose from address is in
+-+		 * kernel space when only X86_BR_USER is requested.
+-+		 */
+-+		if (type == X86_BR_NONE || (br_sel & type) != type ||
+-+		    (!(br_sel & X86_BR_KERNEL) && (from_plm & X86_BR_KERNEL))) {
+- 			cpuc->lbr_entries[i].from = 0;
+- 			compress = true;
+- 		}
+-diff --git a/arch/x86/events/perf_event.h b/arch/x86/events/perf_event.h
+-index eae24bb35dc149..5902a297daa15c 100644
+---- a/arch/x86/events/perf_event.h
+-+++ b/arch/x86/events/perf_event.h
+-@@ -668,7 +668,7 @@ union perf_capabilities {
+- 		u64	perf_metrics:1;
+- 		u64	pebs_output_pt_available:1;
+- 		u64	pebs_timing_info:1;
+--		u64	anythread_deprecated:1;
+-+		u64	__reserved:1;
+- 		u64	rdpmc_metrics_clear:1;
+- 	};
+- 	u64	capabilities;
+ diff --git a/arch/x86/include/asm/kvm-x86-ops.h b/arch/x86/include/asm/kvm-x86-ops.h
+ index 83dc5086138b39..ccf23b3f0e1c2c 100644
+ --- a/arch/x86/include/asm/kvm-x86-ops.h
+@@ -5273,7 +5201,7 @@ index ea0cca58b7c892..8141c3a1e30ad9 100644
+ +	for (i = 0; i < num_modes; i++) {
+ +		char *mode = &buf[i * GUD_CONNECTOR_TV_MODE_NAME_LEN];
+ +
+-+		if (!memchr(mode, '\0', GUD_CONNECTOR_TV_MODE_NAME_LEN)) {
+++		if (strnlen(mode, GUD_CONNECTOR_TV_MODE_NAME_LEN) == GUD_CONNECTOR_TV_MODE_NAME_LEN) {
+ +			ret = -EIO;
+ +			goto free;
+ +		}
+diff --git a/1005_linux-7.2.6.patch b/1005_linux-7.2.6.patch
+index d5bd85e8..3175522a 100644
+--- a/1005_linux-7.2.6.patch
++++ b/1005_linux-7.2.6.patch
+@@ -7864,51 +7864,6 @@ index dbc00b6dd69ee2..222dfab9225fe1 100644
+  	/*
+  	 * NB and Last level cache counters (MSRs) are shared across all cores
+  	 * that share the same NB / Last level cache.  On family 16h and below,
+-diff --git a/arch/x86/events/core.c b/arch/x86/events/core.c
+-index d1af33d96d0a31..af0b67ffb43d8a 100644
+---- a/arch/x86/events/core.c
+-+++ b/arch/x86/events/core.c
+-@@ -2539,7 +2539,8 @@ static int x86_pmu_event_init(struct perf_event *event)
+- 	}
+- 
+- 	if (READ_ONCE(x86_pmu.attr_rdpmc) &&
+--	    !(event->hw.flags & PERF_X86_EVENT_LARGE_PEBS))
+-+	    !(event->hw.flags & PERF_X86_EVENT_LARGE_PEBS) &&
+-+	    !(event->hw.config & ARCH_PERFMON_EVENTSEL_RDPMC_USER_DISABLE))
+- 		event->hw.flags |= PERF_EVENT_FLAG_USER_READ_CNT;
+- 
+- 	return err;
+-diff --git a/arch/x86/events/intel/core.c b/arch/x86/events/intel/core.c
+-index 465c414f145da0..5116b15438a211 100644
+---- a/arch/x86/events/intel/core.c
+-+++ b/arch/x86/events/intel/core.c
+-@@ -3533,7 +3533,7 @@ static void intel_pmu_update_rdpmc_user_disable(struct perf_event *event)
+- 	 */
+- 	if (x86_pmu.attr_rdpmc == X86_USER_RDPMC_ALWAYS_ENABLE ||
+- 	    (x86_pmu.attr_rdpmc == X86_USER_RDPMC_CONDITIONAL_ENABLE &&
+--	     event->ctx->task))
+-+	     (event->attach_state & PERF_ATTACH_TASK)))
+- 		event->hw.config &= ~ARCH_PERFMON_EVENTSEL_RDPMC_USER_DISABLE;
+- 	else
+- 		event->hw.config |= ARCH_PERFMON_EVENTSEL_RDPMC_USER_DISABLE;
+-@@ -3547,8 +3547,6 @@ static void intel_pmu_enable_event(struct perf_event *event)
+- 	struct hw_perf_event *hwc = &event->hw;
+- 	int idx = hwc->idx;
+- 
+--	intel_pmu_update_rdpmc_user_disable(event);
+--
+- 	if (unlikely(event->attr.precise_ip))
+- 		static_call(x86_pmu_pebs_enable)(event);
+- 
+-@@ -5147,6 +5145,8 @@ static int intel_pmu_hw_config(struct perf_event *event)
+- 		leader->hw.flags |= PERF_X86_EVENT_ACR;
+- 	}
+- 
+-+	intel_pmu_update_rdpmc_user_disable(event);
+-+
+- 	if ((event->attr.type == PERF_TYPE_HARDWARE) ||
+- 	    (event->attr.type == PERF_TYPE_HW_CACHE))
+- 		return 0;
+ diff --git a/arch/x86/events/intel/pt.c b/arch/x86/events/intel/pt.c
+ index b5726b50e77dbe..5754cd40556281 100644
+ --- a/arch/x86/events/intel/pt.c
+@@ -8096,1036 +8051,6 @@ index b5726b50e77dbe..5754cd40556281 100644
+  	}
+  
+  	ret = 0;
+-diff --git a/arch/x86/events/intel/uncore.c b/arch/x86/events/intel/uncore.c
+-index 7857959c6e823c..b9ac2f7d31caa0 100644
+---- a/arch/x86/events/intel/uncore.c
+-+++ b/arch/x86/events/intel/uncore.c
+-@@ -757,7 +757,7 @@ static int uncore_pmu_event_init(struct perf_event *event)
+- 
+- 	pmu = uncore_event_to_pmu(event);
+- 	/* no device found for this pmu */
+--	if (!pmu->registered)
+-+	if (!uncore_pmu_available(pmu))
+- 		return -ENOENT;
+- 
+- 	/* Sampling not supported yet */
+-@@ -953,16 +953,18 @@ static int uncore_pmu_register(struct intel_uncore_pmu *pmu)
+- 
+- 	ret = perf_pmu_register(&pmu->pmu, pmu->name, -1);
+- 	if (!ret)
+--		pmu->registered = true;
+-+		uncore_pmu_set_registered(pmu);
+- 	return ret;
+- }
+- 
+- static void uncore_pmu_unregister(struct intel_uncore_pmu *pmu)
+- {
+--	if (!pmu->registered)
+-+	if (!uncore_pmu_registered(pmu))
+- 		return;
+- 	perf_pmu_unregister(&pmu->pmu);
+--	pmu->registered = false;
+-+
+-+	/* Keep PMU_BROKEN_BIT sticky. */
+-+	uncore_pmu_clear_registered(pmu);
+- }
+- 
+- static void uncore_free_boxes(struct intel_uncore_pmu *pmu)
+-@@ -1148,6 +1150,44 @@ uncore_pci_find_dev_pmu(struct pci_dev *pdev, const struct pci_device_id *ids)
+- 	return pmu;
+- }
+- 
+-+static int uncore_box_setup(struct intel_uncore_pmu *pmu,
+-+			    struct intel_uncore_box *box)
+-+{
+-+	int ret;
+-+
+-+	if (uncore_pmu_broken(pmu))
+-+		return -ENODEV;
+-+
+-+	ret = uncore_box_init(box);
+-+	if (ret)
+-+		goto err;
+-+
+-+	/* First active box registers the pmu. */
+-+	if (atomic_inc_return(&pmu->activeboxes) > 1)
+-+		return 0;
+-+
+-+	ret = uncore_pmu_register(pmu);
+-+	if (ret) {
+-+		atomic_dec(&pmu->activeboxes);
+-+		goto err;
+-+	}
+-+
+-+	return 0;
+-+err:
+-+	/*
+-+	 * If any box fails, mark the per-package PMU as broken regardless of
+-+	 * whether it was registered or not.
+-+	 *
+-+	 * Don't decrement refcnt to avoid other in-die CPUs from trying to set
+-+	 * up the PMU box again.
+-+	 *
+-+	 * Don't kfree box; MSR and MMIO boxes are freed at module exit only.
+-+	 */
+-+	uncore_pmu_set_broken(pmu);
+-+	uncore_box_exit(box);
+-+	return ret;
+-+}
+-+
+- /*
+-  * Register the PMU for a PCI device
+-  * @pdev: The PCI device.
+-@@ -1167,26 +1207,22 @@ static int uncore_pci_pmu_register(struct pci_dev *pdev,
+- 		return -EINVAL;
+- 
+- 	box = uncore_alloc_box(type, NUMA_NO_NODE);
+--	if (!box)
+-+	if (!box) {
+-+		uncore_pmu_set_broken(pmu);
+- 		return -ENOMEM;
+-+	}
+- 
+- 	atomic_inc(&box->refcnt);
+- 	box->dieid = die;
+- 	box->pci_dev = pdev;
+- 	box->pmu = pmu;
+--	uncore_box_init(box);
+- 
+--	pmu->boxes[die] = box;
+--	if (atomic_inc_return(&pmu->activeboxes) > 1)
+--		return 0;
+--
+--	/* First active box registers the pmu */
+--	ret = uncore_pmu_register(pmu);
+--	if (ret) {
+--		pmu->boxes[die] = NULL;
+--		uncore_box_exit(box);
+-+	ret = uncore_box_setup(pmu, box);
+-+	if (!ret)
+-+		pmu->boxes[die] = box;
+-+	else
+- 		kfree(box);
+--	}
+-+
+- 	return ret;
+- }
+- 
+-@@ -1248,11 +1284,16 @@ static void uncore_pci_pmu_unregister(struct intel_uncore_pmu *pmu, int die)
+- {
+- 	struct intel_uncore_box *box = pmu->boxes[die];
+- 
+-+	if (!box)
+-+		return;
+-+
+- 	pmu->boxes[die] = NULL;
+- 	if (atomic_dec_return(&pmu->activeboxes) == 0)
+- 		uncore_pmu_unregister(pmu);
+--	uncore_box_exit(box);
+--	kfree(box);
+-+	if (atomic_dec_return(&box->refcnt) == 0) {
+-+		uncore_box_exit(box);
+-+		kfree(box);
+-+	}
+- }
+- 
+- static void uncore_pci_remove(struct pci_dev *pdev)
+-@@ -1272,7 +1313,6 @@ static void uncore_pci_remove(struct pci_dev *pdev)
+- 				break;
+- 			}
+- 		}
+--		WARN_ON_ONCE(i >= UNCORE_EXTRA_PCI_DEV_MAX);
+- 		return;
+- 	}
+- 
+-@@ -1486,7 +1526,8 @@ static void uncore_change_type_ctx(struct intel_uncore_type *type, int old_cpu,
+- 
+- 		if (old_cpu < 0) {
+- 			WARN_ON_ONCE(box->cpu != -1);
+--			if (uncore_die_has_box(type, die, pmu->pmu_idx)) {
+-+			if (uncore_die_has_box(type, die, pmu->pmu_idx) &&
+-+			    !uncore_pmu_broken(pmu)) {
+- 				box->cpu = new_cpu;
+- 				cpumask_set_cpu(new_cpu, &pmu->cpu_mask);
+- 			}
+-@@ -1494,12 +1535,14 @@ static void uncore_change_type_ctx(struct intel_uncore_type *type, int old_cpu,
+- 		}
+- 
+- 		WARN_ON_ONCE(box->cpu != -1 && box->cpu != old_cpu);
+--		box->cpu = -1;
+- 		cpumask_clear_cpu(old_cpu, &pmu->cpu_mask);
+--		if (new_cpu < 0)
+-+		if (new_cpu < 0) {
+-+			box->cpu = -1;
+- 			continue;
+-+		}
+- 
+--		if (!uncore_die_has_box(type, die, pmu->pmu_idx))
+-+		/* An inactive box doesn't need migration. */
+-+		if (box->cpu == -1)
+- 			continue;
+- 		uncore_pmu_cancel_hrtimer(box);
+- 		perf_pmu_migrate_context(&pmu->pmu, old_cpu, new_cpu);
+-@@ -1515,7 +1558,7 @@ static void uncore_change_context(struct intel_uncore_type **uncores,
+- 		uncore_change_type_ctx(*uncores, old_cpu, new_cpu);
+- }
+- 
+--static void uncore_box_unref(struct intel_uncore_type **types, int id)
+-+static void uncore_box_unref(struct intel_uncore_type **types, int die)
+- {
+- 	struct intel_uncore_type *type;
+- 	struct intel_uncore_pmu *pmu;
+-@@ -1526,7 +1569,7 @@ static void uncore_box_unref(struct intel_uncore_type **types, int id)
+- 		type = *types;
+- 		pmu = type->pmus;
+- 		for (i = 0; i < type->num_boxes; i++, pmu++) {
+--			box = pmu->boxes[id];
+-+			box = pmu->boxes[die];
+- 			if (box && box->cpu >= 0 && atomic_dec_return(&box->refcnt) == 0)
+- 				uncore_box_exit(box);
+- 		}
+-@@ -1537,9 +1580,15 @@ static int uncore_event_cpu_offline(unsigned int cpu)
+- {
+- 	int die, target;
+- 
+-+	/* Clear the references */
+-+	die = topology_logical_die_id(cpu);
+-+	uncore_box_unref(uncore_msr_uncores, die);
+-+	uncore_box_unref(uncore_mmio_uncores, die);
+-+
+- 	/* Check if exiting cpu is used for collecting uncore events */
+- 	if (!cpumask_test_and_clear_cpu(cpu, &uncore_cpu_mask))
+--		goto unref;
+-+		return 0;
+-+
+- 	/* Find a new cpu to collect uncore events */
+- 	target = cpumask_any_but(topology_die_cpumask(cpu), cpu);
+- 
+-@@ -1552,16 +1601,10 @@ static int uncore_event_cpu_offline(unsigned int cpu)
+- 	uncore_change_context(uncore_msr_uncores, cpu, target);
+- 	uncore_change_context(uncore_mmio_uncores, cpu, target);
+- 	uncore_change_context(uncore_pci_uncores, cpu, target);
+--
+--unref:
+--	/* Clear the references */
+--	die = topology_logical_die_id(cpu);
+--	uncore_box_unref(uncore_msr_uncores, die);
+--	uncore_box_unref(uncore_mmio_uncores, die);
+- 	return 0;
+- }
+- 
+--static int allocate_boxes(struct intel_uncore_type **types,
+-+static void allocate_boxes(struct intel_uncore_type **types,
+- 			 unsigned int die, unsigned int cpu)
+- {
+- 	struct intel_uncore_box *box, *tmp;
+-@@ -1575,11 +1618,13 @@ static int allocate_boxes(struct intel_uncore_type **types,
+- 		type = *types;
+- 		pmu = type->pmus;
+- 		for (i = 0; i < type->num_boxes; i++, pmu++) {
+--			if (pmu->boxes[die])
+-+			if (pmu->boxes[die] || uncore_pmu_broken(pmu))
+- 				continue;
+- 			box = uncore_alloc_box(type, cpu_to_node(cpu));
+--			if (!box)
+-+			if (!box) {
+-+				uncore_pmu_set_broken(pmu);
+- 				goto cleanup;
+-+			}
+- 			box->pmu = pmu;
+- 			box->dieid = die;
+- 			list_add(&box->active_list, &allocated);
+-@@ -1590,33 +1635,28 @@ static int allocate_boxes(struct intel_uncore_type **types,
+- 		list_del_init(&box->active_list);
+- 		box->pmu->boxes[die] = box;
+- 	}
+--	return 0;
+-+	return;
+- 
+- cleanup:
+- 	list_for_each_entry_safe(box, tmp, &allocated, active_list) {
+- 		list_del_init(&box->active_list);
+- 		kfree(box);
+- 	}
+--	return -ENOMEM;
+- }
+- 
+- static int uncore_box_ref(struct intel_uncore_type **types,
+--			  int id, unsigned int cpu)
+-+			  int die, unsigned int cpu)
+- {
+- 	struct intel_uncore_type *type;
+- 	struct intel_uncore_pmu *pmu;
+- 	struct intel_uncore_box *box;
+--	int i, ret;
+--
+--	ret = allocate_boxes(types, id, cpu);
+--	if (ret)
+--		return ret;
+-+	int i;
+- 
+- 	for (; *types; types++) {
+- 		type = *types;
+- 		pmu = type->pmus;
+- 		for (i = 0; i < type->num_boxes; i++, pmu++) {
+--			box = pmu->boxes[id];
+-+			box = pmu->boxes[die];
+- 			if (box && box->cpu >= 0 && atomic_inc_return(&box->refcnt) == 1)
+- 				uncore_box_init(box);
+- 		}
+-@@ -1626,29 +1666,26 @@ static int uncore_box_ref(struct intel_uncore_type **types,
+- 
+- static int uncore_event_cpu_online(unsigned int cpu)
+- {
+--	int die, target, msr_ret, mmio_ret;
+-+	int die, target;
+- 
+- 	die = topology_logical_die_id(cpu);
+--	msr_ret = uncore_box_ref(uncore_msr_uncores, die, cpu);
+--	mmio_ret = uncore_box_ref(uncore_mmio_uncores, die, cpu);
+--	if (msr_ret && mmio_ret)
+--		return -ENOMEM;
+-+	allocate_boxes(uncore_msr_uncores, die, cpu);
+-+	allocate_boxes(uncore_mmio_uncores, die, cpu);
+- 
+- 	/*
+- 	 * Check if there is an online cpu in the package
+- 	 * which collects uncore events already.
+- 	 */
+- 	target = cpumask_any_and(&uncore_cpu_mask, topology_die_cpumask(cpu));
+--	if (target < nr_cpu_ids)
+--		return 0;
+--
+--	cpumask_set_cpu(cpu, &uncore_cpu_mask);
+--
+--	if (!msr_ret)
+-+	if (target >= nr_cpu_ids) {
+-+		cpumask_set_cpu(cpu, &uncore_cpu_mask);
+- 		uncore_change_context(uncore_msr_uncores, -1, cpu);
+--	if (!mmio_ret)
+- 		uncore_change_context(uncore_mmio_uncores, -1, cpu);
+--	uncore_change_context(uncore_pci_uncores, -1, cpu);
+-+		uncore_change_context(uncore_pci_uncores, -1, cpu);
+-+	}
+-+
+-+	uncore_box_ref(uncore_msr_uncores, die, cpu);
+-+	uncore_box_ref(uncore_mmio_uncores, die, cpu);
+- 	return 0;
+- }
+- 
+-diff --git a/arch/x86/events/intel/uncore.h b/arch/x86/events/intel/uncore.h
+-index c2e5ccb1d72c4b..0adb477d970864 100644
+---- a/arch/x86/events/intel/uncore.h
+-+++ b/arch/x86/events/intel/uncore.h
+-@@ -129,7 +129,7 @@ struct intel_uncore_type {
+- #define events_group attr_groups[2]
+- 
+- struct intel_uncore_ops {
+--	void (*init_box)(struct intel_uncore_box *);
+-+	int (*init_box)(struct intel_uncore_box *);
+- 	void (*exit_box)(struct intel_uncore_box *);
+- 	void (*disable_box)(struct intel_uncore_box *);
+- 	void (*enable_box)(struct intel_uncore_box *);
+-@@ -146,13 +146,24 @@ struct intel_uncore_pmu {
+- 	struct pmu			pmu;
+- 	char				name[UNCORE_PMU_NAME_LEN];
+- 	int				pmu_idx;
+--	bool				registered;
+-+	unsigned long			flags;
+- 	atomic_t			activeboxes;
+- 	cpumask_t			cpu_mask;
+- 	struct intel_uncore_type	*type;
+- 	struct intel_uncore_box		**boxes;
+- };
+- 
+-+#define PMU_REGISTERED_BIT	0
+-+#define PMU_BROKEN_BIT		1
+-+
+-+#define uncore_pmu_registered(pmu)	test_bit(PMU_REGISTERED_BIT, &(pmu)->flags)
+-+#define uncore_pmu_broken(pmu)		test_bit(PMU_BROKEN_BIT, &(pmu)->flags)
+-+#define uncore_pmu_available(pmu)	(uncore_pmu_registered(pmu) &&  \
+-+					 !uncore_pmu_broken(pmu))
+-+#define uncore_pmu_set_registered(pmu)	set_bit(PMU_REGISTERED_BIT, &(pmu)->flags)
+-+#define uncore_pmu_set_broken(pmu)	set_bit(PMU_BROKEN_BIT, &(pmu)->flags)
+-+#define uncore_pmu_clear_registered(pmu) clear_bit(PMU_REGISTERED_BIT, &(pmu)->flags)
+-+
+- struct intel_uncore_extra_reg {
+- 	raw_spinlock_t lock;
+- 	u64 config, config1, config2;
+-@@ -185,7 +196,7 @@ struct intel_uncore_box {
+- #define CFL_UNC_CBO_7_PERFEVTSEL0		0xf70
+- #define CFL_UNC_CBO_7_PER_CTR0			0xf76
+- 
+--#define UNCORE_BOX_FLAG_INITIATED		0
+-+#define UNCORE_BOX_FLAG_INITIALIZED		0
+- /* event config registers are 8-byte apart */
+- #define UNCORE_BOX_FLAG_CTL_OFFS8		1
+- /* CFL 8th CBOX has different MSR space */
+-@@ -557,17 +568,23 @@ static inline u64 uncore_read_counter(struct intel_uncore_box *box,
+- 	return box->pmu->type->ops->read_counter(box, event);
+- }
+- 
+--static inline void uncore_box_init(struct intel_uncore_box *box)
+-+static inline int uncore_box_init(struct intel_uncore_box *box)
+- {
+--	if (!test_and_set_bit(UNCORE_BOX_FLAG_INITIATED, &box->flags)) {
+--		if (box->pmu->type->ops->init_box)
+--			box->pmu->type->ops->init_box(box);
+-+	int ret = 0;
+-+
+-+	if (!test_bit(UNCORE_BOX_FLAG_INITIALIZED, &box->flags) &&
+-+	    box->pmu->type->ops->init_box) {
+-+		ret = box->pmu->type->ops->init_box(box);
+-+		if (!ret)
+-+			__set_bit(UNCORE_BOX_FLAG_INITIALIZED, &box->flags);
+- 	}
+-+
+-+	return ret;
+- }
+- 
+- static inline void uncore_box_exit(struct intel_uncore_box *box)
+- {
+--	if (test_and_clear_bit(UNCORE_BOX_FLAG_INITIATED, &box->flags)) {
+-+	if (test_and_clear_bit(UNCORE_BOX_FLAG_INITIALIZED, &box->flags)) {
+- 		if (box->pmu->type->ops->exit_box)
+- 			box->pmu->type->ops->exit_box(box);
+- 	}
+-diff --git a/arch/x86/events/intel/uncore_discovery.c b/arch/x86/events/intel/uncore_discovery.c
+-index e5077622225686..0a22edf4d509ad 100644
+---- a/arch/x86/events/intel/uncore_discovery.c
+-+++ b/arch/x86/events/intel/uncore_discovery.c
+-@@ -489,14 +489,15 @@ static u64 intel_generic_uncore_box_ctl(struct intel_uncore_box *box)
+- 	return unit->addr;
+- }
+- 
+--void intel_generic_uncore_msr_init_box(struct intel_uncore_box *box)
+-+int intel_generic_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	u64 box_ctl = intel_generic_uncore_box_ctl(box);
+- 
+- 	if (!box_ctl)
+--		return;
+-+		return -ENODEV;
+- 
+- 	wrmsrq(box_ctl, GENERIC_PMON_BOX_CTL_INT);
+-+	return 0;
+- }
+- 
+- void intel_generic_uncore_msr_disable_box(struct intel_uncore_box *box)
+-@@ -578,15 +579,16 @@ static inline int intel_pci_uncore_box_ctl(struct intel_uncore_box *box)
+- 	return UNCORE_DISCOVERY_PCI_BOX_CTRL(intel_generic_uncore_box_ctl(box));
+- }
+- 
+--void intel_generic_uncore_pci_init_box(struct intel_uncore_box *box)
+-+int intel_generic_uncore_pci_init_box(struct intel_uncore_box *box)
+- {
+- 	int box_ctl = intel_pci_uncore_box_ctl(box);
+- 
+- 	if (!box_ctl)
+--		return;
+-+		return -ENODEV;
+- 
+- 	__set_bit(UNCORE_BOX_FLAG_CTL_OFFS8, &box->flags);
+--	pci_write_config_dword(box->pci_dev, box_ctl, GENERIC_PMON_BOX_CTL_INT);
+-+	return pci_write_config_dword(box->pci_dev, box_ctl,
+-+				      GENERIC_PMON_BOX_CTL_INT);
+- }
+- 
+- void intel_generic_uncore_pci_disable_box(struct intel_uncore_box *box)
+-@@ -648,7 +650,7 @@ static struct intel_uncore_ops generic_uncore_pci_ops = {
+- 
+- #define UNCORE_GENERIC_MMIO_SIZE		0x4000
+- 
+--void intel_generic_uncore_mmio_init_box(struct intel_uncore_box *box)
+-+int intel_generic_uncore_mmio_init_box(struct intel_uncore_box *box)
+- {
+- 	static struct intel_uncore_discovery_unit *unit;
+- 	struct intel_uncore_type *type = box->pmu->type;
+-@@ -658,13 +660,13 @@ void intel_generic_uncore_mmio_init_box(struct intel_uncore_box *box)
+- 	if (!unit) {
+- 		pr_warn("Uncore type %d id %d: Cannot find box control address.\n",
+- 			type->type_id, box->pmu->pmu_idx);
+--		return;
+-+		return -ENODEV;
+- 	}
+- 
+- 	if (!unit->addr) {
+- 		pr_warn("Uncore type %d box %d: Invalid box control address.\n",
+- 			type->type_id, unit->id);
+--		return;
+-+		return -ENODEV;
+- 	}
+- 
+- 	addr = unit->addr;
+-@@ -672,10 +674,11 @@ void intel_generic_uncore_mmio_init_box(struct intel_uncore_box *box)
+- 	if (!box->io_addr) {
+- 		pr_warn("Uncore type %d box %d: ioremap error for 0x%llx.\n",
+- 			type->type_id, unit->id, (unsigned long long)addr);
+--		return;
+-+		return -ENOMEM;
+- 	}
+- 
+- 	writel(GENERIC_PMON_BOX_CTL_INT, box->io_addr);
+-+	return 0;
+- }
+- 
+- void intel_generic_uncore_mmio_disable_box(struct intel_uncore_box *box)
+-diff --git a/arch/x86/events/intel/uncore_discovery.h b/arch/x86/events/intel/uncore_discovery.h
+-index e1330342b92ee7..142e1b56cfc2e9 100644
+---- a/arch/x86/events/intel/uncore_discovery.h
+-+++ b/arch/x86/events/intel/uncore_discovery.h
+-@@ -148,11 +148,11 @@ void intel_uncore_generic_uncore_cpu_init(void);
+- int intel_uncore_generic_uncore_pci_init(void);
+- void intel_uncore_generic_uncore_mmio_init(void);
+- 
+--void intel_generic_uncore_msr_init_box(struct intel_uncore_box *box);
+-+int intel_generic_uncore_msr_init_box(struct intel_uncore_box *box);
+- void intel_generic_uncore_msr_disable_box(struct intel_uncore_box *box);
+- void intel_generic_uncore_msr_enable_box(struct intel_uncore_box *box);
+- 
+--void intel_generic_uncore_mmio_init_box(struct intel_uncore_box *box);
+-+int intel_generic_uncore_mmio_init_box(struct intel_uncore_box *box);
+- void intel_generic_uncore_mmio_disable_box(struct intel_uncore_box *box);
+- void intel_generic_uncore_mmio_enable_box(struct intel_uncore_box *box);
+- void intel_generic_uncore_mmio_disable_event(struct intel_uncore_box *box,
+-@@ -160,7 +160,7 @@ void intel_generic_uncore_mmio_disable_event(struct intel_uncore_box *box,
+- void intel_generic_uncore_mmio_enable_event(struct intel_uncore_box *box,
+- 					    struct perf_event *event);
+- 
+--void intel_generic_uncore_pci_init_box(struct intel_uncore_box *box);
+-+int intel_generic_uncore_pci_init_box(struct intel_uncore_box *box);
+- void intel_generic_uncore_pci_disable_box(struct intel_uncore_box *box);
+- void intel_generic_uncore_pci_enable_box(struct intel_uncore_box *box);
+- void intel_generic_uncore_pci_disable_event(struct intel_uncore_box *box,
+-diff --git a/arch/x86/events/intel/uncore_nhmex.c b/arch/x86/events/intel/uncore_nhmex.c
+-index 8962e7cb21e3ec..7a6855281102f0 100644
+---- a/arch/x86/events/intel/uncore_nhmex.c
+-+++ b/arch/x86/events/intel/uncore_nhmex.c
+-@@ -199,9 +199,10 @@ DEFINE_UNCORE_FORMAT_ATTR(counter, counter, "config:6-7");
+- DEFINE_UNCORE_FORMAT_ATTR(match, match, "config1:0-63");
+- DEFINE_UNCORE_FORMAT_ATTR(mask, mask, "config2:0-63");
+- 
+--static void nhmex_uncore_msr_init_box(struct intel_uncore_box *box)
+-+static int nhmex_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	wrmsrq(NHMEX_U_MSR_PMON_GLOBAL_CTL, NHMEX_U_PMON_GLOBAL_EN_ALL);
+-+	return 0;
+- }
+- 
+- static void nhmex_uncore_msr_exit_box(struct intel_uncore_box *box)
+-diff --git a/arch/x86/events/intel/uncore_snb.c b/arch/x86/events/intel/uncore_snb.c
+-index edddd4f9ab5fcb..055131c508ffae 100644
+---- a/arch/x86/events/intel/uncore_snb.c
+-+++ b/arch/x86/events/intel/uncore_snb.c
+-@@ -295,12 +295,14 @@ static void snb_uncore_msr_disable_event(struct intel_uncore_box *box, struct pe
+- 	wrmsrq(event->hw.config_base, 0);
+- }
+- 
+--static void snb_uncore_msr_init_box(struct intel_uncore_box *box)
+-+static int snb_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	if (box->pmu->pmu_idx == 0) {
+- 		wrmsrq(SNB_UNC_PERF_GLOBAL_CTL,
+- 			SNB_UNC_GLOBAL_CTL_EN | SNB_UNC_GLOBAL_CTL_CORE_ALL);
+- 	}
+-+
+-+	return 0;
+- }
+- 
+- static void snb_uncore_msr_enable_box(struct intel_uncore_box *box)
+-@@ -394,7 +396,7 @@ void snb_uncore_cpu_init(void)
+- 		snb_uncore_cbox.num_boxes = topology_num_cores_per_package();
+- }
+- 
+--static void skl_uncore_msr_init_box(struct intel_uncore_box *box)
+-+static int skl_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	if (box->pmu->pmu_idx == 0) {
+- 		wrmsrq(SKL_UNC_PERF_GLOBAL_CTL,
+-@@ -404,6 +406,8 @@ static void skl_uncore_msr_init_box(struct intel_uncore_box *box)
+- 	/* The 8th CBOX has different MSR space */
+- 	if (box->pmu->pmu_idx == 7)
+- 		__set_bit(UNCORE_BOX_FLAG_CFL8_CBOX_MSR_OFFS, &box->flags);
+-+
+-+	return 0;
+- }
+- 
+- static void skl_uncore_msr_enable_box(struct intel_uncore_box *box)
+-@@ -547,10 +551,12 @@ static struct intel_uncore_type *tgl_msr_uncores[] = {
+- 	NULL,
+- };
+- 
+--static void rkl_uncore_msr_init_box(struct intel_uncore_box *box)
+-+static int rkl_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	if (box->pmu->pmu_idx == 0)
+- 		wrmsrq(SKL_UNC_PERF_GLOBAL_CTL, SNB_UNC_GLOBAL_CTL_EN);
+-+
+-+	return 0;
+- }
+- 
+- void tgl_uncore_cpu_init(void)
+-@@ -707,9 +713,10 @@ static struct intel_uncore_type mtl_uncore_hac_cbox = {
+- 	.format_group	= &adl_uncore_format_group,
+- };
+- 
+--static void mtl_uncore_msr_init_box(struct intel_uncore_box *box)
+-+static int mtl_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	wrmsrq(uncore_msr_box_ctl(box), SNB_UNC_GLOBAL_CTL_EN);
+-+	return 0;
+- }
+- 
+- static struct intel_uncore_ops mtl_uncore_msr_ops = {
+-@@ -773,10 +780,12 @@ static struct intel_uncore_type *lnl_msr_uncores[] = {
+- 
+- #define LNL_UNC_MSR_GLOBAL_CTL			0x240e
+- 
+--static void lnl_uncore_msr_init_box(struct intel_uncore_box *box)
+-+static int lnl_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	if (box->pmu->pmu_idx == 0)
+- 		wrmsrq(LNL_UNC_MSR_GLOBAL_CTL, SNB_UNC_GLOBAL_CTL_EN);
+-+
+-+	return 0;
+- }
+- 
+- static struct intel_uncore_ops lnl_uncore_msr_ops = {
+-@@ -874,7 +883,7 @@ static const struct attribute_group snb_uncore_imc_format_group = {
+- 	.attrs = snb_uncore_imc_formats_attr,
+- };
+- 
+--static void snb_uncore_imc_init_box(struct intel_uncore_box *box)
+-+static int snb_uncore_imc_init_box(struct intel_uncore_box *box)
+- {
+- 	struct intel_uncore_type *type = box->pmu->type;
+- 	struct pci_dev *pdev = box->pci_dev;
+-@@ -893,10 +902,13 @@ static void snb_uncore_imc_init_box(struct intel_uncore_box *box)
+- 	addr &= ~(PAGE_SIZE - 1);
+- 
+- 	box->io_addr = ioremap(addr, type->mmio_map_size);
+--	if (!box->io_addr)
+-+	if (!box->io_addr) {
+- 		pr_warn("perf uncore: Failed to ioremap for %s.\n", type->name);
+-+		return -ENOMEM;
+-+	}
+- 
+- 	box->hrtimer_duration = UNCORE_SNB_IMC_HRTIMER_INTERVAL;
+-+	return 0;
+- }
+- 
+- static void snb_uncore_imc_enable_box(struct intel_uncore_box *box)
+-@@ -928,7 +940,7 @@ static int snb_uncore_imc_event_init(struct perf_event *event)
+- 
+- 	pmu = uncore_event_to_pmu(event);
+- 	/* no device found for this pmu */
+--	if (!pmu->registered)
+-+	if (!uncore_pmu_available(pmu))
+- 		return -ENOENT;
+- 
+- 	/* Sampling not supported yet */
+-@@ -1532,7 +1544,7 @@ static struct pci_dev *tgl_uncore_get_mc_dev(void)
+- #define TGL_UNCORE_MMIO_IMC_MEM_OFFSET		0x10000
+- #define TGL_UNCORE_PCI_IMC_MAP_SIZE		0xe000
+- 
+--static void
+-+static int
+- uncore_get_box_mmio_addr(struct intel_uncore_box *box,
+- 			 unsigned int base_offset,
+- 			 int bar_offset, int step)
+-@@ -1541,19 +1553,20 @@ uncore_get_box_mmio_addr(struct intel_uncore_box *box,
+- 	struct intel_uncore_pmu *pmu = box->pmu;
+- 	struct intel_uncore_type *type = pmu->type;
+- 	resource_size_t addr;
+-+	int ret = 0;
+- 	u32 bar;
+- 
+- 	if (!pdev) {
+- 		pr_warn("perf uncore: Cannot find matched IMC device.\n");
+--		return;
+-+		return -ENODEV;
+- 	}
+- 
+- 	pci_read_config_dword(pdev, bar_offset, &bar);
+- 	if (!(bar & BIT(0))) {
+- 		pr_warn("perf uncore: BAR 0x%x is disabled. Failed to map %s counters.\n",
+- 			bar_offset, type->name);
+--		pci_dev_put(pdev);
+--		return;
+-+		ret = -ENODEV;
+-+		goto out;
+- 	}
+- 	bar &= ~BIT(0);
+- 	addr = (resource_size_t)(bar + step * pmu->pmu_idx);
+-@@ -1565,23 +1578,26 @@ uncore_get_box_mmio_addr(struct intel_uncore_box *box,
+- 
+- 	addr += base_offset;
+- 	box->io_addr = ioremap(addr, type->mmio_map_size);
+--	if (!box->io_addr)
+-+	if (!box->io_addr) {
+-+		ret = -ENOMEM;
+- 		pr_warn("perf uncore: Failed to ioremap for %s.\n", type->name);
+--
+-+	}
+-+out:
+- 	pci_dev_put(pdev);
+-+	return ret;
+- }
+- 
+--static void __uncore_imc_init_box(struct intel_uncore_box *box,
+-+static int __uncore_imc_init_box(struct intel_uncore_box *box,
+- 				  unsigned int base_offset)
+- {
+--	uncore_get_box_mmio_addr(box, base_offset,
+-+	return uncore_get_box_mmio_addr(box, base_offset,
+- 				 SNB_UNCORE_PCI_IMC_BAR_OFFSET,
+- 				 TGL_UNCORE_MMIO_IMC_MEM_OFFSET);
+- }
+- 
+--static void tgl_uncore_imc_freerunning_init_box(struct intel_uncore_box *box)
+-+static int tgl_uncore_imc_freerunning_init_box(struct intel_uncore_box *box)
+- {
+--	__uncore_imc_init_box(box, 0);
+-+	return __uncore_imc_init_box(box, 0);
+- }
+- 
+- static struct intel_uncore_ops tgl_uncore_imc_freerunning_ops = {
+-@@ -1648,13 +1664,15 @@ void tgl_uncore_mmio_init(void)
+- #define ADL_UNCORE_IMC_CTL_INT			(ADL_UNCORE_IMC_CTL_RST_CTRL | \
+- 						ADL_UNCORE_IMC_CTL_RST_CTRS)
+- 
+--static void adl_uncore_imc_init_box(struct intel_uncore_box *box)
+-+static int adl_uncore_imc_init_box(struct intel_uncore_box *box)
+- {
+--	__uncore_imc_init_box(box, ADL_UNCORE_IMC_BASE);
+-+	int ret = __uncore_imc_init_box(box, ADL_UNCORE_IMC_BASE);
+- 
+- 	/* The global control in MC1 can control both MCs. */
+--	if (box->io_addr && (box->pmu->pmu_idx == 1))
+-+	if (!ret && (box->pmu->pmu_idx == 1))
+- 		writel(ADL_UNCORE_IMC_CTL_INT, box->io_addr + ADL_UNCORE_IMC_GLOBAL_CTL);
+-+
+-+	return ret;
+- }
+- 
+- static void adl_uncore_mmio_disable_box(struct intel_uncore_box *box)
+-@@ -1731,9 +1749,9 @@ static struct freerunning_counters adl_uncore_imc_freerunning[] = {
+- 	[ADL_MMIO_UNCORE_IMC_DATA_WRITE]	= { 0xA0, 0x0, 0x0, 1, 64 },
+- };
+- 
+--static void adl_uncore_imc_freerunning_init_box(struct intel_uncore_box *box)
+-+static int adl_uncore_imc_freerunning_init_box(struct intel_uncore_box *box)
+- {
+--	__uncore_imc_init_box(box, ADL_UNCORE_IMC_FREERUNNING_BASE);
+-+	return __uncore_imc_init_box(box, ADL_UNCORE_IMC_FREERUNNING_BASE);
+- }
+- 
+- static struct intel_uncore_ops adl_uncore_imc_freerunning_ops = {
+-@@ -1803,9 +1821,9 @@ static const struct attribute_group lnl_uncore_format_group = {
+- 	.attrs		= lnl_uncore_formats_attr,
+- };
+- 
+--static void lnl_uncore_hbo_init_box(struct intel_uncore_box *box)
+-+static int lnl_uncore_hbo_init_box(struct intel_uncore_box *box)
+- {
+--	uncore_get_box_mmio_addr(box, LNL_UNCORE_HBO_BASE,
+-+	return uncore_get_box_mmio_addr(box, LNL_UNCORE_HBO_BASE,
+- 				 LNL_UNCORE_PCI_SAFBAR_OFFSET,
+- 				 LNL_UNCORE_HBO_OFFSET);
+- }
+-@@ -1829,14 +1847,16 @@ static struct intel_uncore_type lnl_uncore_hbo = {
+- 	.format_group	= &lnl_uncore_format_group,
+- };
+- 
+--static void lnl_uncore_sncu_init_box(struct intel_uncore_box *box)
+-+static int lnl_uncore_sncu_init_box(struct intel_uncore_box *box)
+- {
+--	uncore_get_box_mmio_addr(box, LNL_UNCORE_SNCU_BASE,
+-+	int ret = uncore_get_box_mmio_addr(box, LNL_UNCORE_SNCU_BASE,
+- 				 LNL_UNCORE_PCI_SAFBAR_OFFSET,
+- 				 0);
+- 
+--	if (box->io_addr)
+-+	if (!ret)
+- 		writel(ADL_UNCORE_IMC_CTL_INT, box->io_addr + LNL_UNCORE_GLOBAL_CTL);
+-+
+-+	return ret;
+- }
+- 
+- static struct intel_uncore_ops lnl_uncore_sncu_ops = {
+-@@ -1887,13 +1907,15 @@ static struct intel_uncore_type ptl_uncore_imc = {
+- 	.mmio_map_size		= 0xf00,
+- };
+- 
+--static void ptl_uncore_sncu_init_box(struct intel_uncore_box *box)
+-+static int ptl_uncore_sncu_init_box(struct intel_uncore_box *box)
+- {
+--	intel_generic_uncore_mmio_init_box(box);
+-+	int ret = intel_generic_uncore_mmio_init_box(box);
+- 
+- 	/* Clear the global freeze bit */
+- 	if (box->io_addr)
+- 		writel(0, box->io_addr + PTL_UNCORE_GLOBAL_CTL_OFFSET);
+-+
+-+	return ret;
+- }
+- 
+- static struct intel_uncore_ops ptl_uncore_sncu_ops = {
+-diff --git a/arch/x86/events/intel/uncore_snbep.c b/arch/x86/events/intel/uncore_snbep.c
+-index 334dc384b5b936..a97cd029db366e 100644
+---- a/arch/x86/events/intel/uncore_snbep.c
+-+++ b/arch/x86/events/intel/uncore_snbep.c
+-@@ -627,12 +627,12 @@ static u64 snbep_uncore_pci_read_counter(struct intel_uncore_box *box, struct pe
+- 	return count;
+- }
+- 
+--static void snbep_uncore_pci_init_box(struct intel_uncore_box *box)
+-+static int snbep_uncore_pci_init_box(struct intel_uncore_box *box)
+- {
+- 	struct pci_dev *pdev = box->pci_dev;
+- 	int box_ctl = uncore_pci_box_ctl(box);
+- 
+--	pci_write_config_dword(pdev, box_ctl, SNBEP_PMON_BOX_CTL_INT);
+-+	return pci_write_config_dword(pdev, box_ctl, SNBEP_PMON_BOX_CTL_INT);
+- }
+- 
+- static void snbep_uncore_msr_disable_box(struct intel_uncore_box *box)
+-@@ -680,12 +680,14 @@ static void snbep_uncore_msr_disable_event(struct intel_uncore_box *box,
+- 	wrmsrq(hwc->config_base, hwc->config);
+- }
+- 
+--static void snbep_uncore_msr_init_box(struct intel_uncore_box *box)
+-+static int snbep_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	unsigned msr = uncore_msr_box_ctl(box);
+- 
+- 	if (msr)
+- 		wrmsrq(msr, SNBEP_PMON_BOX_CTL_INT);
+-+
+-+	return 0;
+- }
+- 
+- static struct attribute *snbep_uncore_formats_attr[] = {
+-@@ -1507,18 +1509,21 @@ int snbep_uncore_pci_init(void)
+- /* end of Sandy Bridge-EP uncore support */
+- 
+- /* IvyTown uncore support */
+--static void ivbep_uncore_msr_init_box(struct intel_uncore_box *box)
+-+static int ivbep_uncore_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	unsigned msr = uncore_msr_box_ctl(box);
+- 	if (msr)
+- 		wrmsrq(msr, IVBEP_PMON_BOX_CTL_INT);
+-+
+-+	return 0;
+- }
+- 
+--static void ivbep_uncore_pci_init_box(struct intel_uncore_box *box)
+-+static int ivbep_uncore_pci_init_box(struct intel_uncore_box *box)
+- {
+- 	struct pci_dev *pdev = box->pci_dev;
+- 
+--	pci_write_config_dword(pdev, SNBEP_PCI_PMON_BOX_CTL, IVBEP_PMON_BOX_CTL_INT);
+-+	return pci_write_config_dword(pdev, SNBEP_PCI_PMON_BOX_CTL,
+-+				      IVBEP_PMON_BOX_CTL_INT);
+- }
+- 
+- #define IVBEP_UNCORE_MSR_OPS_COMMON_INIT()			\
+-@@ -2784,7 +2789,7 @@ static struct intel_uncore_type hswep_uncore_cbox = {
+- /*
+-  * Write SBOX Initialization register bit by bit to avoid spurious #GPs
+-  */
+--static void hswep_uncore_sbox_msr_init_box(struct intel_uncore_box *box)
+-+static int hswep_uncore_sbox_msr_init_box(struct intel_uncore_box *box)
+- {
+- 	unsigned msr = uncore_msr_box_ctl(box);
+- 
+-@@ -2798,6 +2803,8 @@ static void hswep_uncore_sbox_msr_init_box(struct intel_uncore_box *box)
+- 			wrmsrq(msr, flags);
+- 		}
+- 	}
+-+
+-+	return 0;
+- }
+- 
+- static struct intel_uncore_ops hswep_uncore_sbox_msr_ops = {
+-@@ -4162,12 +4169,13 @@ static const struct attribute_group skx_upi_uncore_format_group = {
+- 	.attrs = skx_upi_uncore_formats_attr,
+- };
+- 
+--static void skx_upi_uncore_pci_init_box(struct intel_uncore_box *box)
+-+static int skx_upi_uncore_pci_init_box(struct intel_uncore_box *box)
+- {
+- 	struct pci_dev *pdev = box->pci_dev;
+- 
+- 	__set_bit(UNCORE_BOX_FLAG_CTL_OFFS8, &box->flags);
+--	pci_write_config_dword(pdev, SKX_UPI_PCI_PMON_BOX_CTL, IVBEP_PMON_BOX_CTL_INT);
+-+	return pci_write_config_dword(pdev, SKX_UPI_PCI_PMON_BOX_CTL,
+-+				      IVBEP_PMON_BOX_CTL_INT);
+- }
+- 
+- static struct intel_uncore_ops skx_upi_uncore_pci_ops = {
+-@@ -4323,12 +4331,13 @@ static struct intel_uncore_type skx_uncore_upi = {
+- 	.cleanup_mapping = skx_upi_cleanup_mapping,
+- };
+- 
+--static void skx_m2m_uncore_pci_init_box(struct intel_uncore_box *box)
+-+static int skx_m2m_uncore_pci_init_box(struct intel_uncore_box *box)
+- {
+- 	struct pci_dev *pdev = box->pci_dev;
+- 
+- 	__set_bit(UNCORE_BOX_FLAG_CTL_OFFS8, &box->flags);
+--	pci_write_config_dword(pdev, SKX_M2M_PCI_PMON_BOX_CTL, IVBEP_PMON_BOX_CTL_INT);
+-+	return pci_write_config_dword(pdev, SKX_M2M_PCI_PMON_BOX_CTL,
+-+				      IVBEP_PMON_BOX_CTL_INT);
+- }
+- 
+- static struct intel_uncore_ops skx_m2m_uncore_pci_ops = {
+-@@ -4831,13 +4840,13 @@ void snr_uncore_cpu_init(void)
+- 	uncore_msr_uncores = snr_msr_uncores;
+- }
+- 
+--static void snr_m2m_uncore_pci_init_box(struct intel_uncore_box *box)
+-+static int snr_m2m_uncore_pci_init_box(struct intel_uncore_box *box)
+- {
+- 	struct pci_dev *pdev = box->pci_dev;
+- 	int box_ctl = uncore_pci_box_ctl(box);
+- 
+- 	__set_bit(UNCORE_BOX_FLAG_CTL_OFFS8, &box->flags);
+--	pci_write_config_dword(pdev, box_ctl, IVBEP_PMON_BOX_CTL_INT);
+-+	return pci_write_config_dword(pdev, box_ctl, IVBEP_PMON_BOX_CTL_INT);
+- }
+- 
+- static struct intel_uncore_ops snr_m2m_uncore_pci_ops = {
+-@@ -5010,17 +5019,22 @@ static int snr_uncore_mmio_map(struct intel_uncore_box *box,
+- 	return 0;
+- }
+- 
+--static void __snr_uncore_mmio_init_box(struct intel_uncore_box *box,
+-+static int __snr_uncore_mmio_init_box(struct intel_uncore_box *box,
+- 				       unsigned int box_ctl, int mem_offset,
+- 				       unsigned int device)
+- {
+--	if (!snr_uncore_mmio_map(box, box_ctl, mem_offset, device))
+-+	int ret;
+-+
+-+	ret = snr_uncore_mmio_map(box, box_ctl, mem_offset, device);
+-+	if (!ret)
+- 		writel(IVBEP_PMON_BOX_CTL_INT, box->io_addr);
+-+
+-+	return ret;
+- }
+- 
+--static void snr_uncore_mmio_init_box(struct intel_uncore_box *box)
+-+static int snr_uncore_mmio_init_box(struct intel_uncore_box *box)
+- {
+--	__snr_uncore_mmio_init_box(box, uncore_mmio_box_ctl(box),
+-+	return __snr_uncore_mmio_init_box(box, uncore_mmio_box_ctl(box),
+- 				   SNR_IMC_MMIO_MEM0_OFFSET,
+- 				   SNR_MC_DEVICE_ID);
+- }
+-@@ -5637,14 +5651,14 @@ int icx_uncore_pci_init(void)
+- 	return 0;
+- }
+- 
+--static void icx_uncore_imc_init_box(struct intel_uncore_box *box)
+-+static int icx_uncore_imc_init_box(struct intel_uncore_box *box)
+- {
+- 	unsigned int box_ctl = box->pmu->type->box_ctl +
+- 			       box->pmu->type->mmio_offset * (box->pmu->pmu_idx % ICX_NUMBER_IMC_CHN);
+- 	int mem_offset = (box->pmu->pmu_idx / ICX_NUMBER_IMC_CHN) * ICX_IMC_MEM_STRIDE +
+- 			 SNR_IMC_MMIO_MEM0_OFFSET;
+- 
+--	__snr_uncore_mmio_init_box(box, box_ctl, mem_offset,
+-+	return __snr_uncore_mmio_init_box(box, box_ctl, mem_offset,
+- 				   SNR_MC_DEVICE_ID);
+- }
+- 
+-@@ -5701,12 +5715,12 @@ static struct uncore_event_desc icx_uncore_imc_freerunning_events[] = {
+- 	{ /* end: all zeroes */ },
+- };
+- 
+--static void icx_uncore_imc_freerunning_init_box(struct intel_uncore_box *box)
+-+static int icx_uncore_imc_freerunning_init_box(struct intel_uncore_box *box)
+- {
+- 	int mem_offset = box->pmu->pmu_idx * ICX_IMC_MEM_STRIDE +
+- 			 SNR_IMC_MMIO_MEM0_OFFSET;
+- 
+--	snr_uncore_mmio_map(box, uncore_mmio_box_ctl(box),
+-+	return snr_uncore_mmio_map(box, uncore_mmio_box_ctl(box),
+- 			    mem_offset, SNR_MC_DEVICE_ID);
+- }
+- 
+-@@ -6003,10 +6017,10 @@ static struct intel_uncore_type spr_uncore_mdf = {
+- 	.name			= "mdf",
+- };
+- 
+--static void spr_uncore_mmio_offs8_init_box(struct intel_uncore_box *box)
+-+static int spr_uncore_mmio_offs8_init_box(struct intel_uncore_box *box)
+- {
+- 	__set_bit(UNCORE_BOX_FLAG_CTL_OFFS8, &box->flags);
+--	intel_generic_uncore_mmio_init_box(box);
+-+	return intel_generic_uncore_mmio_init_box(box);
+- }
+- 
+- static struct intel_uncore_ops spr_uncore_mmio_offs8_ops = {
+-@@ -6187,12 +6201,11 @@ static struct uncore_event_desc spr_uncore_imc_freerunning_events[] = {
+- 
+- #define SPR_MC_DEVICE_ID	0x3251
+- 
+--static void spr_uncore_imc_freerunning_init_box(struct intel_uncore_box *box)
+-+static int spr_uncore_imc_freerunning_init_box(struct intel_uncore_box *box)
+- {
+- 	int mem_offset = box->pmu->pmu_idx * ICX_IMC_MEM_STRIDE + SNR_IMC_MMIO_MEM0_OFFSET;
+--
+--	snr_uncore_mmio_map(box, uncore_mmio_box_ctl(box),
+--			    mem_offset, SPR_MC_DEVICE_ID);
+-+	return snr_uncore_mmio_map(box, uncore_mmio_box_ctl(box),
+-+				   mem_offset, SPR_MC_DEVICE_ID);
+- }
+- 
+- static struct intel_uncore_ops spr_uncore_imc_freerunning_ops = {
+-@@ -6881,20 +6894,24 @@ static unsigned int dmr_iio_freerunning_box_offsets[] = {
+- 	0x0, 0x8000, 0x18000, 0x20000
+- };
+- 
+--static void dmr_uncore_freerunning_init_box(struct intel_uncore_box *box)
+-+static int dmr_uncore_freerunning_init_box(struct intel_uncore_box *box)
+- {
+- 	struct intel_uncore_type *type = box->pmu->type;
+- 	u64 mmio_base;
+- 
+- 	if (box->pmu->pmu_idx >= type->num_boxes)
+--		return;
+-+		return -ENODEV;
+- 
+- 	mmio_base = DMR_IMH1_HIOP_MMIO_BASE;
+- 	mmio_base += dmr_iio_freerunning_box_offsets[box->pmu->pmu_idx];
+- 
+- 	box->io_addr = ioremap(mmio_base, type->mmio_map_size);
+--	if (!box->io_addr)
+-+	if (!box->io_addr) {
+- 		pr_warn("perf uncore: Failed to ioremap for %s.\n", type->name);
+-+		return -ENOMEM;
+-+	}
+-+
+-+	return 0;
+- }
+- 
+- static struct intel_uncore_ops dmr_uncore_freerunning_ops = {
+-diff --git a/arch/x86/events/perf_event.h b/arch/x86/events/perf_event.h
+-index 5902a297daa15c..a8afea8d38f0c3 100644
+---- a/arch/x86/events/perf_event.h
+-+++ b/arch/x86/events/perf_event.h
+-@@ -1344,7 +1344,7 @@ static inline u64 x86_pmu_get_event_config(struct perf_event *event)
+- static inline bool x86_pmu_has_rdpmc_user_disable(struct pmu *pmu)
+- {
+- 	return !!(hybrid(pmu, config_mask) &
+--		 ARCH_PERFMON_EVENTSEL_RDPMC_USER_DISABLE);
+-+		  ARCH_PERFMON_EVENTSEL_RDPMC_USER_DISABLE);
+- }
+- 
+- extern struct event_constraint emptyconstraint;
+ diff --git a/arch/x86/include/asm/linkage.h b/arch/x86/include/asm/linkage.h
+ index a7294656ad908a..c9769a7b6e66c1 100644
+ --- a/arch/x86/include/asm/linkage.h
+@@ -51154,43 +50079,6 @@ index 58b86fd7877136..2b25e44da7978b 100644
+  }
+  
+  static const struct of_device_id sc2731_charger_of_match[] = {
+-diff --git a/drivers/powercap/intel_rapl_common.c b/drivers/powercap/intel_rapl_common.c
+-index 1006d183d5081a..6b7d11a0abc5d0 100644
+---- a/drivers/powercap/intel_rapl_common.c
+-+++ b/drivers/powercap/intel_rapl_common.c
+-@@ -32,6 +32,9 @@
+- 
+- #define ENERGY_STATUS_MASK		GENMASK(31, 0)
+- 
+-+/* Width of the RAPL energy counters, see the *_ENERGY_STATUS_MASK defines */
+-+#define RAPL_CNTR_WIDTH			32
+-+
+- #define POWER_UNIT_OFFSET		0x00
+- #define POWER_UNIT_MASK			GENMASK(3, 0)
+- 
+-@@ -1227,6 +1230,7 @@ static u64 rapl_event_update(struct perf_event *event)
+- 	struct rapl_package_pmu_data *data = event_to_pmu_data(event);
+- 	u64 prev_raw_count, new_raw_count;
+- 	s64 delta, sdelta;
+-+	int shift = 64 - RAPL_CNTR_WIDTH;
+- 
+- 	/*
+- 	 * Follow the generic code to drain hwc->prev_count.
+-@@ -1243,8 +1247,13 @@ static u64 rapl_event_update(struct perf_event *event)
+- 	 * Now we have the new raw value and have updated the prev
+- 	 * timestamp already. We can now calculate the elapsed delta
+- 	 * (event-)time and add that to the generic event.
+-+	 *
+-+	 * Careful, the counter is narrower than u64 and is not
+-+	 * sign-extended above its physical width.  Shift both values up
+-+	 * so that the subtraction wraps, then shift the result back down.
+- 	 */
+--	delta = new_raw_count - prev_raw_count;
+-+	delta = (new_raw_count << shift) - (prev_raw_count << shift);
+-+	delta >>= shift;
+- 
+- 	/*
+- 	 * Scale delta to smallest unit (2^-32)
+ diff --git a/drivers/powercap/intel_rapl_tpmi.c b/drivers/powercap/intel_rapl_tpmi.c
+ index 7f41491d9cd115..73f36d9c09b1b6 100644
+ --- a/drivers/powercap/intel_rapl_tpmi.c
+@@ -53526,37 +52414,6 @@ index b9fd6bfc88e5ea..829a7327fc4035 100644
+  	       priv->base + EN7581_TEMPMONCTL2);
+  
+  	/* AHB poll is set to 146 * 68.64 = 10.02us */
+-diff --git a/drivers/thermal/intel/int340x_thermal/int3400_thermal.c b/drivers/thermal/intel/int340x_thermal/int3400_thermal.c
+-index d200734625ee86..5d70301d4a3d9c 100644
+---- a/drivers/thermal/intel/int340x_thermal/int3400_thermal.c
+-+++ b/drivers/thermal/intel/int340x_thermal/int3400_thermal.c
+-@@ -356,8 +356,10 @@ static void cleanup_odvp(struct int3400_thermal_priv *priv)
+- 			kfree(priv->odvp_attrs[i].attr.attr.name);
+- 		}
+- 		kfree(priv->odvp_attrs);
+-+		priv->odvp_attrs = NULL;
+- 	}
+- 	kfree(priv->odvp);
+-+	priv->odvp = NULL;
+- 	priv->odvp_count = 0;
+- }
+- 
+-@@ -635,7 +637,6 @@ free_notify:
+- 	acpi_remove_notify_handler(priv->adev->handle, ACPI_DEVICE_NOTIFY,
+- 				   int3400_notify);
+- free_sysfs:
+--	cleanup_odvp(priv);
+- 	if (!ZERO_OR_NULL_PTR(priv->data_vault)) {
+- 		device_remove_bin_file(&pdev->dev, &bin_attr_data_vault);
+- 		kfree(priv->data_vault);
+-@@ -649,6 +650,7 @@ free_rel_misc:
+- 		acpi_thermal_rel_misc_device_remove(priv->adev->handle);
+- 	thermal_zone_device_unregister(priv->thermal);
+- free_art_trt:
+-+	cleanup_odvp(priv);
+- 	kfree(priv->trts);
+- 	kfree(priv->arts);
+- free_priv:
+ diff --git a/drivers/thermal/qcom/qcom-spmi-adc-tm5.c b/drivers/thermal/qcom/qcom-spmi-adc-tm5.c
+ index d7f2e6ca92c2c9..d1b086737bcd28 100644
+ --- a/drivers/thermal/qcom/qcom-spmi-adc-tm5.c
+@@ -53625,160 +52482,6 @@ index 79222d233129dc..a9eaedefdac3b0 100644
+  
+  	val = readl(ts->base + K1_TSENSOR_THRSH_REG(ch->id));
+  
+-diff --git a/drivers/thermal/thermal_hwmon.c b/drivers/thermal/thermal_hwmon.c
+-index ec73d03a1e60a2..45ce21914df869 100644
+---- a/drivers/thermal/thermal_hwmon.c
+-+++ b/drivers/thermal/thermal_hwmon.c
+-@@ -95,34 +95,12 @@ thermal_hwmon_lookup_by_type(const struct thermal_zone_device *tz)
+- 	struct thermal_hwmon_device *hwmon;
+- 	char type[THERMAL_NAME_LENGTH];
+- 
+--	mutex_lock(&thermal_hwmon_list_lock);
+- 	list_for_each_entry(hwmon, &thermal_hwmon_list, node) {
+- 		strscpy(type, tz->type);
+- 		strreplace(type, '-', '_');
+--		if (!strcmp(hwmon->type, type)) {
+--			mutex_unlock(&thermal_hwmon_list_lock);
+-+		if (!strcmp(hwmon->type, type))
+- 			return hwmon;
+--		}
+- 	}
+--	mutex_unlock(&thermal_hwmon_list_lock);
+--
+--	return NULL;
+--}
+--
+--/* Find the temperature input matching a given thermal zone */
+--static struct thermal_hwmon_temp *
+--thermal_hwmon_lookup_temp(const struct thermal_hwmon_device *hwmon,
+--			  const struct thermal_zone_device *tz)
+--{
+--	struct thermal_hwmon_temp *temp;
+--
+--	mutex_lock(&thermal_hwmon_list_lock);
+--	list_for_each_entry(temp, &hwmon->tz_list, hwmon_node)
+--		if (temp->tz == tz) {
+--			mutex_unlock(&thermal_hwmon_list_lock);
+--			return temp;
+--		}
+--	mutex_unlock(&thermal_hwmon_list_lock);
+- 
+- 	return NULL;
+- }
+-@@ -138,7 +116,9 @@ int thermal_add_hwmon_sysfs(struct thermal_zone_device *tz)
+- 	struct thermal_hwmon_device *hwmon;
+- 	struct thermal_hwmon_temp *temp;
+- 	int new_hwmon_device = 1;
+--	int result;
+-+	int result = 0;
+-+
+-+	mutex_lock(&thermal_hwmon_list_lock);
+- 
+- 	hwmon = thermal_hwmon_lookup_by_type(tz);
+- 	if (hwmon) {
+-@@ -147,8 +127,10 @@ int thermal_add_hwmon_sysfs(struct thermal_zone_device *tz)
+- 	}
+- 
+- 	hwmon = kzalloc_obj(*hwmon);
+--	if (!hwmon)
+--		return -ENOMEM;
+-+	if (!hwmon) {
+-+		result = -ENOMEM;
+-+		goto unlock;
+-+	}
+- 
+- 	INIT_LIST_HEAD(&hwmon->tz_list);
+- 	strscpy(hwmon->type, tz->type, THERMAL_NAME_LENGTH);
+-@@ -196,24 +178,24 @@ int thermal_add_hwmon_sysfs(struct thermal_zone_device *tz)
+- 		temp->temp_crit_present = true;
+- 	}
+- 
+--	mutex_lock(&thermal_hwmon_list_lock);
+- 	if (new_hwmon_device)
+- 		list_add_tail(&hwmon->node, &thermal_hwmon_list);
+- 	list_add_tail(&temp->hwmon_node, &hwmon->tz_list);
+--	mutex_unlock(&thermal_hwmon_list_lock);
+- 
+--	return 0;
+-+	goto unlock;
+- 
+-- unregister_input:
+-+unregister_input:
+- 	device_remove_file(hwmon->device, &temp->temp_input.attr);
+-- free_temp_mem:
+-+free_temp_mem:
+- 	kfree(temp);
+-- unregister_name:
+-+unregister_name:
+- 	if (new_hwmon_device)
+- 		hwmon_device_unregister(hwmon->device);
+-- free_mem:
+-+free_mem:
+- 	if (new_hwmon_device)
+- 		kfree(hwmon);
+-+unlock:
+-+	mutex_unlock(&thermal_hwmon_list_lock);
+- 
+- 	return result;
+- }
+-@@ -221,8 +203,11 @@ EXPORT_SYMBOL_GPL(thermal_add_hwmon_sysfs);
+- 
+- void thermal_remove_hwmon_sysfs(struct thermal_zone_device *tz)
+- {
+-+	struct thermal_hwmon_temp *temp, *entry;
+- 	struct thermal_hwmon_device *hwmon;
+--	struct thermal_hwmon_temp *temp;
+-+	bool unregister;
+-+
+-+	guard(mutex)(&thermal_hwmon_list_lock);
+- 
+- 	hwmon = thermal_hwmon_lookup_by_type(tz);
+- 	if (unlikely(!hwmon)) {
+-@@ -231,29 +216,25 @@ void thermal_remove_hwmon_sysfs(struct thermal_zone_device *tz)
+- 		return;
+- 	}
+- 
+--	temp = thermal_hwmon_lookup_temp(hwmon, tz);
+--	if (unlikely(!temp)) {
+--		/* Should never happen... */
+--		dev_dbg(&tz->device, "temperature input lookup failed!\n");
+--		return;
+--	}
+-+	unregister = hwmon->device->parent == &tz->device;
+- 
+--	device_remove_file(hwmon->device, &temp->temp_input.attr);
+--	if (temp->temp_crit_present)
+--		device_remove_file(hwmon->device, &temp->temp_crit.attr);
+-+	list_for_each_entry_safe_reverse(temp, entry, &hwmon->tz_list, hwmon_node) {
+-+		if (!unregister && temp->tz != tz)
+-+			continue;
+- 
+--	mutex_lock(&thermal_hwmon_list_lock);
+--	list_del(&temp->hwmon_node);
+--	kfree(temp);
+--	if (!list_empty(&hwmon->tz_list)) {
+--		mutex_unlock(&thermal_hwmon_list_lock);
+--		return;
+-+		device_remove_file(hwmon->device, &temp->temp_input.attr);
+-+		if (temp->temp_crit_present)
+-+			device_remove_file(hwmon->device, &temp->temp_crit.attr);
+-+
+-+		list_del(&temp->hwmon_node);
+-+		kfree(temp);
+- 	}
+--	list_del(&hwmon->node);
+--	mutex_unlock(&thermal_hwmon_list_lock);
+- 
+--	hwmon_device_unregister(hwmon->device);
+--	kfree(hwmon);
+-+	if (unregister) {
+-+		list_del(&hwmon->node);
+-+		hwmon_device_unregister(hwmon->device);
+-+		kfree(hwmon);
+-+	}
+- }
+- EXPORT_SYMBOL_GPL(thermal_remove_hwmon_sysfs);
+- 
+ diff --git a/drivers/thunderbolt/stream.c b/drivers/thunderbolt/stream.c
+ index 4cc86d8d649183..43d29d69dcdbb8 100644
+ --- a/drivers/thunderbolt/stream.c
+diff --git a/1006_linux-7.2.7.patch b/1006_linux-7.2.7.patch
+index 26d1e948..b63e9a05 100644
+--- a/1006_linux-7.2.7.patch
++++ b/1006_linux-7.2.7.patch
+@@ -1495,7 +1495,7 @@ index 91a093d8cf2e77..3dcd7dfc92b1c1 100644
+  void intel_pmu_drain_pebs_buffer(void)
+  {
+ +	struct cpu_hw_events *cpuc = this_cpu_ptr(&cpu_hw_events);
+- 	struct perf_sample_data data;
++	struct perf_sample_data data = {};
+  
+ +	WARN_ON_ONCE(cpuc->enabled);
+ +
+@@ -3475,136 +3475,6 @@ index b1c2717cd0237b..6995ce039db97d 100644
+  	edac_device_reset_delay_period(ctl_info, value);
+  
+  	return count;
+-diff --git a/drivers/edac/igen6_edac.c b/drivers/edac/igen6_edac.c
+-index f1fc20d4ebf611..12d718a50e1c9b 100644
+---- a/drivers/edac/igen6_edac.c
+-+++ b/drivers/edac/igen6_edac.c
+-@@ -175,8 +175,6 @@ static struct res_config {
+- 	/* Set imc->dimm_{l_size,s_size,l_map}[chan]. */
+- 	void (*set_dimm_params)(struct igen6_imc *imc, int chan);
+- 	bool (*ibecc_available)(struct pci_dev *pdev);
+--	/* Extract error address logged in IBECC */
+--	u64 (*err_addr)(u64 ecclog);
+- 	/* Convert error address logged in IBECC to system physical address */
+- 	u64 (*err_addr_to_sys_addr)(u64 eaddr, int mc);
+- 	/* Convert error address logged in IBECC to integrated memory controller address */
+-@@ -522,11 +520,6 @@ static u64 adl_err_addr_to_imc_addr(u64 eaddr, int mc)
+- 	return imc_addr;
+- }
+- 
+--static u64 rpl_p_err_addr(u64 ecclog)
+--{
+--	return field_get(res_cfg->reg_eccerrlog_addr_mask, ecclog);
+--}
+--
+- static enum mem_type ptl_h_get_mem_type(struct igen6_imc *imc)
+- {
+- 	u32 mtype, val;
+-@@ -716,22 +709,6 @@ static struct res_config adl_n_cfg = {
+- 	.err_addr_to_imc_addr	= adl_err_addr_to_imc_addr,
+- };
+- 
+--static struct res_config rpl_p_cfg = {
+--	.machine_check		= true,
+--	.num_imc		= 2,
+--	.reg_mchbar_mask	= GENMASK_ULL(41, 17),
+--	.reg_tom_mask		= GENMASK_ULL(41, 20),
+--	.reg_touud_mask		= GENMASK_ULL(41, 20),
+--	.reg_eccerrlog_addr_mask = GENMASK_ULL(45, 5),
+--	.imc_base		= 0xd800,
+--	.ibecc_base		= 0xd400,
+--	.ibecc_error_log_offset	= 0x68,
+--	.ibecc_available	= tgl_ibecc_available,
+--	.err_addr		= rpl_p_err_addr,
+--	.err_addr_to_sys_addr	= adl_err_addr_to_sys_addr,
+--	.err_addr_to_imc_addr	= adl_err_addr_to_imc_addr,
+--};
+--
+- static struct res_config mtl_ps_cfg = {
+- 	.machine_check				= true,
+- 	.num_imc				= 2,
+-@@ -877,11 +854,11 @@ static struct pci_device_id igen6_pci_tbl[] = {
+- 	{ PCI_VDEVICE(INTEL, DID_ASL_SKU1), .driver_data = (kernel_ulong_t)&adl_n_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_ASL_SKU2), .driver_data = (kernel_ulong_t)&adl_n_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_ASL_SKU3), .driver_data = (kernel_ulong_t)&adl_n_cfg },
+--	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU1), .driver_data = (kernel_ulong_t)&rpl_p_cfg },
+--	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU2), .driver_data = (kernel_ulong_t)&rpl_p_cfg },
+--	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU3), .driver_data = (kernel_ulong_t)&rpl_p_cfg },
+--	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU4), .driver_data = (kernel_ulong_t)&rpl_p_cfg },
+--	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU5), .driver_data = (kernel_ulong_t)&rpl_p_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU1), .driver_data = (kernel_ulong_t)&adl_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU2), .driver_data = (kernel_ulong_t)&adl_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU3), .driver_data = (kernel_ulong_t)&adl_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU4), .driver_data = (kernel_ulong_t)&adl_cfg },
+-+	{ PCI_VDEVICE(INTEL, DID_RPL_P_SKU5), .driver_data = (kernel_ulong_t)&adl_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_MTL_PS_SKU1), .driver_data = (kernel_ulong_t)&mtl_ps_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_MTL_PS_SKU2), .driver_data = (kernel_ulong_t)&mtl_ps_cfg },
+- 	{ PCI_VDEVICE(INTEL, DID_MTL_PS_SKU3), .driver_data = (kernel_ulong_t)&mtl_ps_cfg },
+-@@ -1009,14 +986,22 @@ static void set_dimm_params(struct igen6_imc *imc, int chan)
+- 
+- static int decode_chan_idx(u64 addr, u64 mask, int intlv_bit)
+- {
+--	u64 hash_addr = addr & mask, hash = 0;
+--	u64 intlv = (addr >> intlv_bit) & 1;
+-+	u64 hash_addr, hash = 0;
+- 	int i;
+- 
+-+	/*
+-+	 * In hash mode, the @intlv_bit is the lowest selected bit of @addr
+-+	 * to be XORed. While @mask may or may not include this @intlv_bit,
+-+	 * we enforce that @mask includes @intlv_bit to ensure @intlv_bit is
+-+	 * XORed exactly once.
+-+	 */
+-+	mask |= 1 << intlv_bit;
+-+	hash_addr = addr & mask;
+-+
+- 	for (i = 6; i < 20; i++)
+- 		hash ^= (hash_addr >> i) & 1;
+- 
+--	return (int)hash ^ intlv;
+-+	return (int)hash;
+- }
+- 
+- static u64 decode_channel_addr(u64 addr, int intlv_bit)
+-@@ -1035,19 +1020,18 @@ static void decode_addr(u64 addr, u32 hash, u64 s_size, int l_map,
+- {
+- 	int intlv_bit = CHANNEL_HASH_LSB_MASK_BIT(hash) + 6;
+- 
+--	if (addr > 2 * s_size) {
+-+	if (addr >= 2 * s_size) {
+- 		*sub_addr = addr - s_size;
+- 		*idx = l_map;
+- 		return;
+- 	}
+- 
+--	if (CHANNEL_HASH_MODE(hash)) {
+--		*sub_addr = decode_channel_addr(addr, intlv_bit);
+-+	*sub_addr = decode_channel_addr(addr, intlv_bit);
+-+
+-+	if (CHANNEL_HASH_MODE(hash))
+- 		*idx = decode_chan_idx(addr, CHANNEL_HASH_MASK(hash), intlv_bit);
+--	} else {
+--		*sub_addr = decode_channel_addr(addr, 6);
+--		*idx = GET_BITFIELD(addr, 6, 6);
+--	}
+-+	else
+-+		*idx = GET_BITFIELD(addr, intlv_bit, intlv_bit);
+- }
+- 
+- static int igen6_decode(struct decoded_addr *res)
+-@@ -1230,11 +1214,7 @@ static void ecclog_work_cb(struct work_struct *work)
+- 
+- 	llist_for_each_entry_safe(node, tmp, head, llnode) {
+- 		memset(&res, 0, sizeof(res));
+--		if (res_cfg->err_addr)
+--			eaddr = res_cfg->err_addr(node->ecclog);
+--		else
+--			eaddr = node->ecclog & res_cfg->reg_eccerrlog_addr_mask;
+--
+-+		eaddr	     = node->ecclog & res_cfg->reg_eccerrlog_addr_mask;
+- 		res.mc	     = node->mc;
+- 		res.sys_addr = res_cfg->err_addr_to_sys_addr(eaddr, res.mc);
+- 		res.imc_addr = res_cfg->err_addr_to_imc_addr(eaddr, res.mc);
+ diff --git a/drivers/gpu/drm/adp/Kconfig b/drivers/gpu/drm/adp/Kconfig
+ index 9fcc27eb200dbc..acfa21ee06d228 100644
+ --- a/drivers/gpu/drm/adp/Kconfig
